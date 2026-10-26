@@ -33,7 +33,7 @@ These are live Homeio captures from the project device, taken on 26 October 2026
 
 ![Memory reported by Linux](docs/screenshots/homeio-memory.png)
 
-The phone has 8 GiB of physical RAM. Linux reports about 7.4 GiB after platform reservations. Live readings fluctuate. GPU identification is confirmed; Jellyfin hardware transcoding is still untested. Network identifiers are hidden, and the Jellyfin shortcut is omitted for the capture. See [capture notes](docs/SCREENSHOTS.md).
+The phone has 8 GiB of physical RAM. Linux reports about 7.4 GiB after platform reservations. Live readings fluctuate. GPU identification is confirmed; MediaTek hardware transcoding failed with the current stack; CPU transcoding has been tested. See [validation](docs/VALIDATION.md). Network identifiers are hidden, and the Jellyfin shortcut is omitted for the capture. See [capture notes](docs/SCREENSHOTS.md).
 
 </details>
 
@@ -51,12 +51,12 @@ The original device has been tested, but the public procedure has not yet been r
 | Automatic NAS startup after reboot | Working |
 | NAS stays available with display off | Working after the mobile-power-saver fix |
 | Docker ARM64 container | Working |
-| Jellyfin | ARM64 container and web interface working with persistent Raspberry Pi device-mapping compatibility; media playback still to be tested |
+| Jellyfin | Direct playback at 1080p and CPU video transcoding to 720p tested; persistent Raspberry Pi device-mapping compatibility included |
 | Physical power and volume buttons | Working with the documented adaptations |
 | CPU / GPU / RAM reporting | ARM hardware reporting patch included |
 | USB hub, simultaneous charging and external disks | Not yet tested |
 | Bluetooth, SIM / mobile data and cameras | Not validated; Bluetooth currently reports a missing rfkill device |
-| Jellyfin hardware transcoding | Not validated |
+| Jellyfin hardware transcoding | MediaTek V4L2 tests failed with the current stack; CPU mode retained |
 
 ## What is included
 

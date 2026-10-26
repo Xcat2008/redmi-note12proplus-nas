@@ -8,4 +8,6 @@ The patch only adapts the normal Jellyfin app and known Jellyfin images. It remo
 
 Open `http://YOUR_PHONE_ADDRESS:8097` and complete Jellyfin's own first-run setup. Its account is separate from Homeio's. Start with hardware acceleration disabled; Mali desktop rendering does not establish MediaTek Jellyfin transcoding support. Prefer direct play for the first media test.
 
+On 26 October 2026, a real Chrome playback test passed for H.264 1080p direct play and forced H.264 720p/1.5 Mbps CPU transcoding. The sampled server rate was about 90–97 fps, with no dropped client frames in the recorded transcode sample. MediaTek hardware probes returned no usable encoded/decoded frames, so hardware acceleration remains disabled. See [the measured results](../../docs/VALIDATION.md).
+
 Upstream: https://jellyfin.org/ and https://docs.linuxserver.io/images/docker-jellyfin/ .

@@ -1,0 +1,59 @@
+--- a/modules/settings/components/settings.tsx
++++ b/modules/settings/components/settings.tsx
+@@ -23,7 +23,7 @@
+ 
+ const SIDEBAR_GROUPS: { label: string; ids: SettingsSectionId[] }[] = [
+   { label: "System",         ids: ["general", "appearance", "updates"] },
+-  { label: "Infrastructure", ids: ["network", "storage", "docker"] },
++  { label: "Infrastructure", ids: ["network", "bluetooth", "storage", "docker"] },
+   { label: "Integrations",  ids: ["integrations"] },
+   { label: "Automation",     ids: ["scheduled-tasks", "backup"] },
+   { label: "Access",         ids: ["users", "security", "notifications"] },
+--- a/modules/settings/components/panel/types.ts
++++ b/modules/settings/components/panel/types.ts
+@@ -14,6 +14,7 @@
+ export type SettingsSectionId =
+   | "general"
+   | "network"
++  | "bluetooth"
+   | "storage"
+   | "docker"
+   | "integrations"
+--- a/modules/settings/components/panel/registry.tsx
++++ b/modules/settings/components/panel/registry.tsx
+@@ -37,6 +37,8 @@
+   SettingsSectionDefinition,
+ } from "@/modules/settings/components/panel/types";
+ 
++import { BluetoothSection, BluetoothIcon } from "@/modules/settings/components/panel/sections/bluetooth-section";
++
+ export const SETTINGS_SECTIONS: SettingsSection[] = [
+   // System
+   { id: "general",          label: "General",          icon: ServerRegular       },
+@@ -58,6 +60,7 @@
+   // Danger zone
+   { id: "power",            label: "Power",            icon: PowerRegular        },
+   { id: "advanced",         label: "Advanced",         icon: WrenchRegular       },
++  { id: "bluetooth",        label: "Bluetooth",        icon: BluetoothIcon       },
+ ];
+ 
+ type SettingsRegistryContext = {
+@@ -171,6 +174,8 @@
+       save: getDefaultSaveConfig(context.settingsBackend, "updates"),
+     },
+ 
++    { ...SETTINGS_SECTIONS[14], liveApply: true, render: () => <BluetoothSection /> },
++
+     // ── Infrastructure ───────────────────────────────────────────────────
+     {
+       ...SETTINGS_SECTIONS[3], // Network
+--- a/next.config.mjs
++++ b/next.config.mjs
+@@ -5,6 +5,7 @@
+ 
+ /** @type {import('next').NextConfig} */
+ const nextConfig = {
++  serverExternalPackages: ["dbus-next"],
+   experimental: {
+     proxyClientMaxBodySize: "10gb",
+     serverActions: {

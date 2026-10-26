@@ -55,7 +55,7 @@ The original device has been tested, but the public procedure has not yet been r
 | Physical power and volume buttons | Working with the documented adaptations |
 | CPU / GPU / RAM reporting | ARM hardware reporting patch included |
 | USB hub, simultaneous charging and external disks | Not yet tested |
-| Bluetooth | Controller registration, power and discovery verified; physical pairing remains untested |
+| Bluetooth | Radio power and discovery verified from Homeio Settings; controller pairing controls included, physical pairing remains untested |
 | SIM / mobile data and cameras | Not validated |
 | Jellyfin video acceleration | H.264 / HEVC / VP9 SDR decoding, Mali resize and H.264 encoding verified |
 
@@ -73,6 +73,7 @@ The fix is included in the clean image candidate and in the automatic NAS instal
 - Source revisions and compatibility patches for the connectivity modules.
 - The display wake bridge and NAS power-policy setup.
 - Homeio ARM hardware-reporting changes, with fixture tests.
+- [Bluetooth controls in Homeio Settings](docs/BLUETOOTH.md), without using the phone's screen.
 - The MediaTek DMA-BUF adapter, automatically configured for fresh Jellyfin store installs.
 - The Jellyfin compatibility fix and a portable software-mode compose example.
 - Installation, recovery, validation and licensing notes.

@@ -14,7 +14,7 @@ Tested device: **Redmi Note 12 Pro+ 5G, 22101316UG / rubypro**, MediaTek MT6877 
 | USB | High-speed USB 2.0 observed. External Ethernet and storage share that bus. |
 | Wired video | Do not expect HDMI from a USB-C hub; this phone has no supported wired video output. |
 | Charging + USB host | Not yet validated with the intended hub and native Linux |
-| Bluetooth | HIDL/VHCI bridge working: controller registration, power toggle and discovery; physical pairing remains untested |
+| Bluetooth | HIDL/VHCI bridge working; Homeio radio power, discovery and automatic scan timeout tested in the browser; physical controller pairing remains untested |
 | SIM / modem / mobile data | Not validated |
 | Cameras | Not validated; not a goal of this NAS build |
 | Video acceleration | H.264 / HEVC / VP9 8-bit SDR hardware decode, Mali resize and H.264 hardware encode verified; other video paths may use CPU |

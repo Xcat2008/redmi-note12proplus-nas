@@ -17,3 +17,21 @@ downloads/
 __pycache__/
 *.pyc
 node_modules/
+# Game libraries, BIOS, playlists and saves are never project assets.
+ROMs/
+roms/
+BIOS/
+bios/
+*.lpl
+*.rom
+*.iso
+*.chd
+*.cue
+*.bin
+*.gen
+*.sms
+*.sfc
+*.nes
+*.srm
+*.sav
+*.state*

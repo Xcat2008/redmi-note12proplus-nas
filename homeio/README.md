@@ -15,3 +15,17 @@ Apply `jellyfin-hardware-compat.patch` to the same v1.10.3 checkout and copy its
 Run `node --import tsx --test lib/server/modules/docker/compose-hardware-compat.test.ts` for the six regression cases. The full ESLint, Next production build and server TypeScript build also passed on the working device. Build/deploy the patched Homeio; setting the profile file by itself does not modify an unpatched installation. A future upstream Homeio replacement needs the patches reapplied or merged upstream.
 
 This fixes fresh installs after uninstalling, rather than relying on a manually edited installed compose file. Installation settings and media remain in their normal application data directories.
+
+## Bluetooth controllers from the web desktop
+
+`bluetooth-settings.patch` adds a Bluetooth section to Settings. Copy its implementation from `new-files/`, apply the patch to the pinned Homeio release and rebuild. It uses the NAS system BlueZ service through D-Bus; it does not use the browser computer's Bluetooth adapter.
+
+The panel can switch the radio on/off, search for 45 seconds, pair a selected controller, connect, disconnect and forget it. Its pairing agent belongs only to that D-Bus connection and accepts requests only for the selected device during an active pairing operation. It does not replace Phosh's default agent or make the NAS discoverable. Pairing requires automatic controller pairing; PIN-entry accessories are outside this panel's scope.
+
+All endpoints require a Homeio session. Mutations also require a matching browser origin. Device addresses are validated and resolved against BlueZ's current device objects; the API never executes shell commands. Scan sessions and pairing attempts have bounded lifetimes. Six service tests cover validation, discovery lifetime, agent selection, pairing timeouts and device lifecycle:
+
+```sh
+node --test lib/server/modules/bluetooth/service.test.mjs
+```
+
+Physical Xbox/PlayStation pairing and in-game input remain separate validation steps. For Moonlight on a TV, connect the controller to that TV; its input reaches Sunshine over the streaming connection. See [Bluetooth setup](../docs/BLUETOOTH.md).

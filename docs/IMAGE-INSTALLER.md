@@ -14,6 +14,7 @@ A clean candidate has been assembled separately from the author’s working NAS.
 | MediaTek video adapter and automatic Jellyfin profile | Compiled into the clean candidate; full video chain tested on the running device |
 | RetroArch in Homeio, Ozone and native Mali rendering | Tested on the running device; included in the next candidate's setup |
 | Sunshine | Included in the gaming stack; TV/Moonlight streaming still needs validation |
+| Bluetooth controls in Homeio | First-setup source included; authenticated radio controls tested on the running NAS, physical pairing pending |
 | Per-installation Linux PIN and SSH key | Implemented; no shared default credentials |
 | Windows installer | Built; default operation only verifies the package |
 | Model, unlocked bootloader, slot and partition-layout checks | Implemented |

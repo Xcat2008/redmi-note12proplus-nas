@@ -35,7 +35,7 @@ Esta é uma **prévia técnica com código-fonte, configurações e notas de ins
 
 O aparelho usado é o **Redmi Note 12 Pro+ 5G, modelo 22101316UG (rubypro)**, com Dimensity 1080, 8 GiB de RAM física e 256 GB de armazenamento. Não usar imagens do modelo 4G ou de outro telemóvel.
 
-Confirmámos Linux nativo, Wi-Fi, Homeio, Docker ARM64, arranque automático e funcionamento da NAS com o ecrã apagado. O Jellyfin reproduz no browser e converte 1080p para 720p usando descodificação MediaTek, redimensionamento Mali e codificação H.264 MediaTek. O Bluetooth já regista o adaptador, liga/desliga e inicia a pesquisa; falta testar o emparelhamento físico. Hub, carregamento simultâneo com USB e discos externos ainda não foram ensaiados; SIM e câmaras não estão validados.
+Confirmámos Linux nativo, Wi-Fi, Homeio, Docker ARM64, arranque automático e funcionamento da NAS com o ecrã apagado. O Jellyfin reproduz no browser e converte 1080p para 720p usando descodificação MediaTek, redimensionamento Mali e codificação H.264 MediaTek. O Bluetooth pode ser gerido em **Settings → Bluetooth**, no Homeio: ligar/desligar, procurar, emparelhar, ligar, desligar e esquecer dispositivos. A pesquisa e os controlos do rádio foram testados no browser; falta testar o emparelhamento com um comando físico. [Como usar](docs/BLUETOOTH.md). Hub, carregamento simultâneo com USB e discos externos ainda não foram ensaiados; SIM e câmaras não estão validados.
 
 ## Vídeo por hardware
 

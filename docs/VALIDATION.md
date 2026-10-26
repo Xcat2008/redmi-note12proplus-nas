@@ -19,6 +19,10 @@ The catalog download succeeded, but its compose template tried to mount `/dev/vc
 
 The permanent Homeio materialization hook then passed six regression tests, ESLint, a full Next production build and the server TypeScript build. Two uninstall/install cycles using the untouched catalog source passed, preserving application data (`removeVolumes=false`); Jellyfin became Healthy after both. A subsequent MediaTek profile passed nine compose regression tests, ESLint, both production builds, a fresh empty-config container and another store uninstall/install cycle with the application data preserved. Actual browser playback then used the native `h264_v4l2m2m` encoder on `/dev/video2` through ION/DMA-BUF. That initial encoder-only sample ran around 60–65 frames/s. The subsequent native media bridge passed full hardware decoding, Mali resizing and H.264 encoding, including browser playback and seeking. HEVC and VP9 SDR samples each produced 180 decoded, resized and encoded frames. See [video validation](MEDIATEK-VIDEO.md). External-disk libraries remain untested. The Homeio app-store catalog is not universally certified for the phone: each app's CPU architecture, devices, permissions and power requirements need checking.
 
+## Homeio Bluetooth controls
+
+The native BlueZ panel passed six service tests. Browser checks verified radio power on/off, discovery, stopping a search, automatic stop after 45 seconds and discovery continuing while switching Settings sections. Unauthenticated requests, cross-origin mutations and malformed device addresses were rejected. The Next.js production build and server TypeScript build passed. Physical controller pairing and button input remain untested.
+
 ## Not yet established
 
 - Hub host-mode operation with simultaneous PD charging.

@@ -1,4 +1,6 @@
-![Redmi NAS — José Miranda](docs/assets/banner.svg)
+![Redmi NAS — José Miranda](docs/assets/redmi-nas-hero.png)
+
+*Project cover illustration. The screenshots below show the real running device.*
 
 # Redmi Note 12 Pro+ NAS
 
@@ -16,11 +18,30 @@ This project documents a working NAS experiment on a **Xiaomi Redmi Note 12 Pro+
 
 The phone keeps a normal Phosh desktop. Homeio runs in the background and starts automatically; the display can switch off while the NAS remains available over Wi-Fi.
 
+## Running on the actual phone
+
+These are live Homeio captures from the project device, taken on 26 October 2026. The web desktop is served by native Linux on the Redmi, over Wi-Fi.
+
+![Homeio running on the Redmi NAS](docs/screenshots/homeio-live-desktop.png)
+
+| Eight CPU cores | Integrated GPU |
+| --- | --- |
+| ![Six Cortex-A55 and two Cortex-A78 cores](docs/screenshots/homeio-cpu.png) | ![ARM Mali-G68 MC4](docs/screenshots/homeio-gpu.png) |
+
+<details>
+<summary>Memory details and capture notes</summary>
+
+![Memory reported by Linux](docs/screenshots/homeio-memory.png)
+
+The phone has 8 GiB of physical RAM. Linux reports about 7.4 GiB after platform reservations. Live readings fluctuate. GPU identification is confirmed; Jellyfin hardware transcoding is still untested. Network identifiers are hidden, and the Jellyfin shortcut is omitted for the capture. See [capture notes](docs/SCREENSHOTS.md).
+
+</details>
+
 ## Release status
 
-**Developer preview. NAS setup has an automated entry point for an already booting native Droidian port. Replacing Android with Linux is still a manual porting stage; there is no public flashable image.**
+**Developer preview. The NAS runs on the project device. A clean boot/data image and a guarded Windows installer have also been built, but still need a complete physical installation test before a public binary release.**
 
-The original device has been tested, but the public procedure has not yet been repeated on a second clean phone. Some setup stages still need a porter familiar with Android boot images, Halium and Linux storage. Read the [installation guide](docs/INSTALLATION.md) before deciding to replicate it.
+The original device has been tested, but the public procedure has not yet been repeated on a second clean phone. The candidate uses individual setup credentials rather than a copy of the author’s configured system. Read the [installer status](docs/IMAGE-INSTALLER.md) and [installation guide](docs/INSTALLATION.md) before deciding to replicate it.
 
 | Capability | Result on the project device |
 | --- | --- |
@@ -56,11 +77,11 @@ The custom 3D enclosure is a separate personal build and is not included here. F
 4. On an already working native Droidian installation, use the scripts in `scripts/` after reviewing them.
 5. Follow [validation](docs/VALIDATION.md), including a display-off test, before relying on it as a NAS.
 
-This is an independent community experiment, not an official Xiaomi, Droidian or Homeio device release. We do not claim that using a phone as a Linux server is new or that this is the first such project worldwide.
+This is an independent community experiment, not an official Xiaomi, Droidian or Homeio device release. 
 
 ## Support the project
 
-Donation links are temporarily disabled while the author verifies the payment setup. No payment recipient is configured in this preview. Voluntary contributions will support José Miranda's work on this project. They do not purchase support or imply an endorsement from the upstream projects. Please also consider supporting those projects directly; see [credits](CREDITS.md).
+The author’s GitHub Sponsors application is awaiting approval. A support link will be added when the profile is live. Contributions will support José Miranda’s work on this project; please also consider supporting the upstream projects listed in [credits](CREDITS.md).
 
 Contributions, reproducible bug reports and documentation improvements are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md) before posting logs.
 

@@ -1,18 +1,37 @@
-![Redmi NAS — José Miranda](docs/assets/banner.svg)
+![Redmi NAS — José Miranda](docs/assets/redmi-nas-hero.png)
+
+*Ilustração de capa do projeto. As capturas abaixo mostram o aparelho real em funcionamento.*
 
 # NAS num Redmi Note 12 Pro+ 5G
 
 🇵🇹 **Projeto português, desenvolvido em Portugal por José Miranda (Xcat2008).**
 
-Projeto de **José Miranda (Xcat2008)**, [Xcat2008](https://github.com/Xcat2008).
-
 Transformar um telemóvel antigo num servidor doméstico: **Droidian / Debian nativo**, Wi-Fi, armazenamento interno e **Homeio** como ambiente de trabalho acessível pelo browser. O Homeio funciona em segundo plano; o ecrã do telefone pode ficar apagado sem parar a NAS.
 
 ![Arquitetura](docs/assets/architecture.svg)
 
+## O painel a funcionar no Redmi
+
+Capturas reais do Homeio, feitas em 26 de outubro de 2026. O servidor está no telemóvel, com Linux nativo e ligação por Wi-Fi.
+
+![Homeio em funcionamento no Redmi NAS](docs/screenshots/homeio-live-desktop.png)
+
+| Processador: oito núcleos | GPU integrada |
+| --- | --- |
+| ![Seis Cortex-A55 e dois Cortex-A78](docs/screenshots/homeio-cpu.png) | ![ARM Mali-G68 MC4](docs/screenshots/homeio-gpu.png) |
+
+<details>
+<summary>Memória e notas das capturas</summary>
+
+![Memória reconhecida pelo Linux](docs/screenshots/homeio-memory.png)
+
+O aparelho tem 8 GiB de RAM física; o Linux apresenta cerca de 7,4 GiB após as reservas da plataforma. Os valores de utilização variam. A identificação da GPU está confirmada; a transcodificação por hardware no Jellyfin ainda precisa de teste. Os identificadores da rede foram ocultados e o atalho do Jellyfin foi retirado apenas das capturas. [Notas das imagens](docs/SCREENSHOTS.md).
+
+</details>
+
 ## Estado desta publicação
 
-Esta é uma **prévia técnica com código-fonte, configurações e notas de instalação**. A configuração da NAS já tem um ponto de entrada automatizado para um Droidian nativo que arranque; substituir Android por Linux ainda exige o processo manual de adaptação. Não inclui uma imagem universal. A instalação original funcionou neste Redmi; ainda falta repetir o procedimento público num segundo aparelho limpo.
+Esta é uma **prévia técnica com código-fonte, configurações e notas de instalação**. A NAS funciona no aparelho do projeto. Também foi construída uma imagem limpa de arranque e dados, com um instalador para Windows, mas falta testar essa instalação completa num aparelho limpo antes de disponibilizar os binários ao público. Consulta o [estado do instalador](docs/IMAGE-INSTALLER.md).
 
 O aparelho usado é o **Redmi Note 12 Pro+ 5G, modelo 22101316UG (rubypro)**, com Dimensity 1080, 8 GiB de RAM física e 256 GB de armazenamento. Não usar imagens do modelo 4G ou de outro telemóvel.
 
@@ -32,8 +51,8 @@ A caixa 3D é um projeto pessoal separado e não faz parte deste repositório. T
 
 ## Donativos e agradecimentos
 
-O link de apoio financeiro está temporariamente desativado enquanto o autor confirma a configuração do pagamento.
+O perfil GitHub Sponsors do autor aguarda aprovação. O link de apoio será acrescentado quando estiver ativo.
 
-O trabalho usa software criado por várias comunidades. Os agradecimentos e respetivos links estão em [CREDITS.md](CREDITS.md), em especial **Droidian, Debian, Halium, libhybris, Linux e Homeio**. A autoria deste projeto é a integração e adaptação feita por José Miranda; não é a autoria desses sistemas. Também não afirmamos que este seja o primeiro projeto deste género no mundo.
+O trabalho usa software criado por várias comunidades. Os agradecimentos e respetivos links estão em [CREDITS.md](CREDITS.md), em especial **Droidian, Debian, Halium, libhybris, Linux e Homeio**. A autoria deste projeto é a integração e adaptação feita por José Miranda; não é a autoria desses sistemas.
 
 [Documentação principal em inglês](README.md) · [Licenças](LICENSE.md)

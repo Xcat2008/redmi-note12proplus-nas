@@ -66,8 +66,10 @@
     "note": "Historical device-specific build fingerprint only; not a downloadable release."
   },
   "public_release": {
-    "kind": "source-and-porting-notes",
+    "kind": "source-patches-live-captures-and-installer-source",
     "flashable_image": false,
-    "clean_second_device_install_verified": false
+    "clean_second_device_install_verified": false,
+    "clean_image_candidate_built": true,
+    "physical_candidate_install_verified": false
   }
 }

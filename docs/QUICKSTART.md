@@ -5,7 +5,7 @@
 | Stage | Current experience |
 | --- | --- |
 | Xiaomi account and bootloader unlock | Manual, with Xiaomi's official tools |
-| Replace Android with the native Droidian port | Manual developer/porter procedure; no public flashable image yet |
+| Replace Android with the native Droidian port | Clean image/Windows installer candidate built; physical installation test pending |
 | Install the NAS stack once native Droidian boots | `scripts/install-nas.sh`, an automated entry point with a read-only preflight mode |
 | Create the Homeio administrator | First-run web page, your own credentials |
 | Add applications | Homeio app store; app-specific hardware compatibility must still be checked |
@@ -38,4 +38,4 @@ After completion, open `http://redmi-nas.local` from another computer on the sam
 
 O comando acima **não instala Linux sobre Android**. Primeiro é necessário desbloquear pelo processo oficial Xiaomi e preparar o port Droidian descrito no [guia técnico](INSTALLATION.md). Essa parte ainda é para quem sabe trabalhar com boot images, Halium e recuperação de telemóveis.
 
-O passo necessário para uma experiência simples é produzir uma imagem Linux limpa e reproduzível, sem dados do autor, e testá-la de raiz num segundo aparelho. Essa imagem ainda não está publicada. O repositório apresenta esta limitação de forma explícita.
+O passo necessário para uma experiência simples é produzir uma imagem Linux limpa e reproduzível, sem dados do autor, e testá-la de raiz num segundo aparelho. A imagem candidata e o instalador já foram construídos. A instalação física completa ainda precisa de validação antes de publicar os binários. Consulta o [estado da imagem](IMAGE-INSTALLER.md).

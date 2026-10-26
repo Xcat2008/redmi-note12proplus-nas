@@ -15,5 +15,7 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npm test
+      - name: Installer offline checks
+        run: python3 -m unittest discover -s image -v
       - name: Shell syntax
         run: find scripts homeio/installer -name '*.sh' -print0 | xargs -0 -n1 bash -n

@@ -1,47 +1,43 @@
-# H.264 hardware encoding on the Redmi NAS
+# Hardware video on the Redmi NAS
 
-The supported port now uses the **MediaTek VPU** to encode H.264 in Jellyfin. This is the video codec engine in the Dimensity 1080; the Mali-G68 GPU handles graphics separately. Success here does not automatically accelerate every application.
+The current bridge uses **MediaTek hardware decoding → Mali GPU resizing → MediaTek H.264 hardware encoding**. FFmpeg copies the resulting video into Jellyfin's HLS output and handles audio. Video acceleration here does not automatically accelerate every other application.
 
 ![Video path](assets/mediatek-video.svg)
 
-## What changed
+## Implementation
 
-The vendor `mtk-vcodec-enc` driver expects ION-backed DMA-BUF memory. Standard FFmpeg V4L2 MMAP queues did not supply the buffer handles expected by that driver. The small [adapter](../apps/jellyfin/mediatek/mediatek-dmabuf-bridge.c) translates the queue memory operations and allocates compatible ION buffers. Jellyfin still selects its native `h264_v4l2m2m` encoder; the adapter does not substitute a software encoder or alter reported playback statistics.
+The [native bridge](../apps/jellyfin/mediatek/full/README.md) uses named MediaTek Codec2 components through the Android services already supplied by Droidian. Decoded hardware buffers are imported directly into EGL. An OpenGL ES shader resizes them; native fences prevent reuse before GPU work completes. The H.264 encoder receives a surface rather than CPU-converted raw video.
 
-The preload wrapper is scoped to Jellyfin's FFmpeg process. It is not a system-wide preload. The container receives three explicit device mappings and read-only adapter mounts, without privileged mode. The installed adapter needs access to the codec nodes and ION allocator; use it only with the pinned kernel and tested ARM64 container version.
+A small transport writer preserves the hardware codec's presentation timestamps, including after a seek. The local broker accepts an already-open media descriptor. It has no network listener and does not grant the Jellyfin container Android binder access, the host PID namespace or privileged mode. The container's existing read-only adapter mount also exposes the local socket.
 
-## Automatic installation and persistence
+Android's 32-bit vendor services require thread identifiers below 65536. A persistent `kernel.pid_max=65535` avoids their startup failures after long periods of process churn. The video service also selects the Codec2 configuration and waits for the media resource manager before accepting work.
 
-The [NAS installer](../scripts/install-nas.sh) compiles and installs the adapter before building Homeio. The clean image candidate also contains a precompiled ARM64 copy, its source and the profile marker. Homeio applies the configuration when materializing a Jellyfin store installation:
+The earlier [ION/DMA-BUF adapter](../apps/jellyfin/mediatek/mediatek-dmabuf-bridge.c) remains available for FFmpeg's `h264_v4l2m2m` encoder. Unsupported requests or unavailable native services retain this existing path, with the reason logged. A process-local preload is used only by that fallback, not system-wide.
 
-- Pin the tested LinuxServer Jellyfin image and set the FFmpeg wrapper path.
-- Map `/dev/video1`, `/dev/video2` and `/dev/ion`; let LinuxServer initialize device permissions.
-- Mount the adapter and first-run initializer read-only.
-- Set H.264 hardware encoding in `encoding.xml` once. Existing settings are backed up; later user choices are preserved.
+## Persistence
 
-Application accounts and libraries are created by the user. No account, API key, media file or Wi-Fi configuration from the development phone is baked into the image. The clean image's complete physical installation remains pending; this does not change the tested results on the running device.
+The clean candidate contains the compiled ARM64 tools, source, matching hardware bundle and systemd units. [Hardware installation](../scripts/install-hardware-services.sh) verifies bundle hashes, installs the modules and enables the services. The NAS installer applies it after the original video adapter. Homeio's existing Jellyfin materialization hook restores the wrapper and mounts after a catalog reinstall.
 
-## Validation on 26 October 2026
+Each installation creates its own accounts and keys. No personal Jellyfin database, API key, library, Wi-Fi profile, Bluetooth pairing or media file is included. The clean image still needs its complete physical installation and redistribution review before a public binary release.
 
-| Test | Result |
+## Tests on 26 October 2026
+
+| Test | Observed result |
 | --- | --- |
-| Native encoder output | Synthetic sample and 450-frame real-video sample verified independently |
-| Empty Jellyfin configuration | Healthy startup, first-run setup still incomplete, settings writable by the service user, native H.264 encoding passed |
-| Homeio catalog reinstall | Uninstall/install without removing data; adapter mounts, device access and encoding profile restored automatically |
-| Real Jellyfin browser playback after reinstall | 1080p input → 1280 × 720 H.264 HLS, requested 1.5 Mb/s quality; `h264_v4l2m2m` on `/dev/video2` |
-| Encoder speed | Approximately 60–65 frames/s in the measured 30 fps video sample |
-| Restart | Container restarted and playback verified again |
+| Native full video chain | 180 H.264 frames decoded, resized and encoded; Mali-G68 MC4 / OpenGL ES renderer confirmed |
+| Real Jellyfin Web playback | 1920 × 1080 source → 1280 × 720 H.264 HLS at the requested 1.5 Mb/s quality; MP3 audio copied |
+| Browser seek | Playback jumped to 185 seconds and continued beyond 191 seconds; requested HLS segments returned HTTP 200 |
+| HEVC SDR input | 180 frames decoded by `c2.mtk.hevc.decoder`, resized by Mali and encoded by `c2.mtk.avc.encoder` |
+| VP9 SDR input | 180 frames decoded by `c2.mtk.vp9.decoder`, resized by Mali and encoded to H.264 |
+| Timestamp and orientation checks | MPEG-TS output carries codec timestamps; coordinate inversion corrected and browser frames inspected |
+| Original encoder profile | Earlier empty-config, container-restart and store-reinstall checks passed; encoder-only reference was approximately 60–65 frames/s |
 
-![Real browser playback after a fresh catalog reinstall](screenshots/jellyfin-h264-playback.png)
+These are tests on one device with selected clips, not a guarantee for every file, resolution or concurrent-client workload. Container CPU alone excludes the native broker and Android codec services; it must not be presented as total transcoding CPU usage.
 
-The screenshot shows the actual playback panel at 65 encoding frames/s. The measured browser samples counted 0 dropped frames out of 789 before the container restart check, and 1 out of 786 after the catalog reinstall. The movie frame is from the credited CC BY film below.
+The main test film was *Big Buck Bunny*, Blender Foundation / www.bigbuckbunny.org, 2008, with the 2013 Sunflower version by Janus Bager Kristensen, licensed [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/). [Original test download](https://download.blender.org/demo/movies/BBB/bbb_sunflower_1080p_30fps_normal.mp4.zip). It is not included in the image.
 
-Jellyfin reported `HardwareAccelerationType=v4l2m2m` and `IsVideoDirect=false`. FFmpeg confirmed `h264 (native) → h264 (h264_v4l2m2m)` and DMA-BUF queues. Sampled container CPU consumption was about three cores, compared with about seven for the earlier software-encoding reference. These are observations for one clip and device, not a benchmark of all media or concurrent clients.
+## Scope
 
-The test video was *Big Buck Bunny*, Blender Foundation / www.bigbuckbunny.org, 2008, with the 2013 Sunflower version by Janus Bager Kristensen, licensed [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/). [Original test download](https://download.blender.org/demo/movies/BBB/bbb_sunflower_1080p_30fps_normal.mp4.zip). The film is not included in the project image.
+Validated native inputs are H.264, HEVC and VP9 in 8-bit SDR, with H.264 output. HDR tone mapping, 10-bit processing, subtitle burn-in, interlaced/anamorphic/rotated media and other formats are not certified by these tests. The wrapper preserves the existing FFmpeg path for unsupported processing. Audio conversion, HLS packaging and application services still use CPU.
 
-## Limits
-
-**Decoding and resizing still run on the CPU.** Hardware H.264 encoding is verified; hardware H.265 encoding, hardware decoding, HDR tone mapping and other formats are not. Direct play remains preferable when the client accepts the original file. Do not select NVIDIA, VA-API or another unrelated backend for this phone.
-
-The standalone software-mode compose example remains available as a fallback. Before changing the pinned Jellyfin/FFmpeg image or kernel, repeat the empty-config, real playback and reinstall checks.
+Direct play remains preferable when the client accepts the original file. Do not select NVIDIA or another unrelated backend for this phone. After changing the kernel, Android hardware stack or pinned Jellyfin/FFmpeg version, repeat the real-playback, seek, fresh-configuration and reinstall checks.

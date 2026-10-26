@@ -25,7 +25,7 @@ Capturas reais do Homeio, feitas em 26 de outubro de 2026. O servidor está no t
 
 ![Memória reconhecida pelo Linux](docs/screenshots/homeio-memory.png)
 
-O aparelho tem 8 GiB de RAM física; o Linux apresenta cerca de 7,4 GiB após as reservas da plataforma. Os valores de utilização variam. A gráfica Mali e a codificação H.264 pelo motor de vídeo MediaTek estão confirmadas; a descodificação e o redimensionamento continuam no CPU. Os identificadores da rede foram ocultados e o atalho do Jellyfin foi retirado apenas das capturas. [Notas das imagens](docs/SCREENSHOTS.md).
+O aparelho tem 8 GiB de RAM física; o Linux apresenta cerca de 7,4 GiB após as reservas da plataforma. Os valores de utilização variam. A descodificação e a codificação de vídeo MediaTek, com redimensionamento na gráfica Mali, já foram testadas no leitor web do Jellyfin. Os identificadores da rede foram ocultados e o atalho do Jellyfin foi retirado apenas das capturas. [Notas das imagens](docs/SCREENSHOTS.md).
 
 </details>
 
@@ -35,13 +35,13 @@ Esta é uma **prévia técnica com código-fonte, configurações e notas de ins
 
 O aparelho usado é o **Redmi Note 12 Pro+ 5G, modelo 22101316UG (rubypro)**, com Dimensity 1080, 8 GiB de RAM física e 256 GB de armazenamento. Não usar imagens do modelo 4G ou de outro telemóvel.
 
-Confirmámos Linux nativo, Wi-Fi, Homeio, Docker ARM64, arranque automático e funcionamento da NAS com o ecrã apagado. O Jellyfin também abre pela rede, depois de adaptar o modelo da loja que exigia dispositivos de vídeo do Raspberry Pi. A reprodução no browser e a conversão de 1080p para 720p com codificação H.264 por hardware foram testadas. A correção é aplicada automaticamente quando se instala o Jellyfin pela loja, incluindo depois de desinstalar e voltar a instalar. Hub, carregamento simultâneo com USB e discos externos ainda não foram ensaiados; SIM, Bluetooth e câmaras não estão validados.
+Confirmámos Linux nativo, Wi-Fi, Homeio, Docker ARM64, arranque automático e funcionamento da NAS com o ecrã apagado. O Jellyfin reproduz no browser e converte 1080p para 720p usando descodificação MediaTek, redimensionamento Mali e codificação H.264 MediaTek. O Bluetooth já regista o adaptador, liga/desliga e inicia a pesquisa; falta testar o emparelhamento físico. Hub, carregamento simultâneo com USB e discos externos ainda não foram ensaiados; SIM e câmaras não estão validados.
 
 ## Vídeo por hardware
 
 ![Percurso do vídeo no MediaTek](docs/assets/mediatek-video.svg)
 
-O adaptador incluído liga o FFmpeg ao motor de vídeo MediaTek através de ION/DMA-BUF. O teste real de 1080p para 720p atingiu cerca de 60–65 imagens codificadas por segundo, com reprodução no browser. A descodificação e o redimensionamento ainda usam o CPU; esta correção não equivale a acelerar todos os formatos ou todas as aplicações.
+A ponte de vídeo utiliza os serviços multimédia do Android que o Droidian já inclui. Foram testados H.264, HEVC e VP9 SDR, saída H.264, reprodução no browser e procura dentro do filme. O áudio, o empacotamento HLS e outros serviços continuam a usar CPU. HDR, legendas gravadas na imagem e outros formatos não ficam certificados por estes testes. Esta integração também não acelera automaticamente todas as aplicações.
 
 A imagem limpa candidata já inclui o adaptador compilado, o código e o perfil automático do Jellyfin. A instalação de raiz dessa imagem num aparelho limpo continua por validar. [Detalhes e testes](docs/MEDIATEK-VIDEO.md).
 

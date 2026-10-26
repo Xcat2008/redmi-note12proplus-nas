@@ -1,0 +1,22 @@
+{
+  "version": 2,
+  "kernel": "4.19.191-g914ba8403bb3",
+  "files": {
+    "bluebinder-nas": "d474300cfdcfdd130c52b92c4a43f972a4ce9c038351ed0310a39e4649b78f71",
+    "ffmpeg-bridge": "da34c565df25c4c104bc6f8cbfa4fd0142a52bdf48bd0b99e39dff1b1ad34daa",
+    "hci_vhci.ko": "14cd09e5bcaa094a05689bdb3e977976d1ab36b7dc21a3ce8b085a0d68b8ff6f",
+    "hidp.ko": "b3e2e1030109484327373b7f5aa3fc0f29c4497e1d32ea40e1040910c14195f1",
+    "modules.builtin": "9592252bb5ea785a7fc5789fef7fb5bcfb3e42b8daa6e943d6c1d23078276c78",
+    "modules.builtin.modinfo": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "surface-transcode": "c3e19c3d4840fbe1e1ae73601dffd6ffc48bbb45e846270d3c89d3c6291ee49a"
+  },
+  "source_files": {
+    "apps/jellyfin/mediatek/full/broker.py": "1070fc013bb7f50d8b96364d57ab0ee28f6c79b580290081ead141b53a7f5f97",
+    "apps/jellyfin/mediatek/full/ffmpeg-bridge.go": "eb95d4522815156fe50fd7b3ace2843f82ba5d00ed88b1123e14672c302fd52f",
+    "apps/jellyfin/mediatek/full/prepare-video-services": "b45c0fbd192f914869dfd85b50ed8cdf89fcb272e90d306066636113b677f0db",
+    "apps/jellyfin/mediatek/full/README.md": "5f530bdf6090f7d6e7217a75a76ea28fff975117731b945f8894494eaaf7da4d",
+    "apps/jellyfin/mediatek/full/redmi-video-broker.service": "ee683aa466f925b5bf3d1b18cead0dc92bdd07cfae6b4b3fe96a1f8dfeae3e01",
+    "apps/jellyfin/mediatek/full/surface-transcode.cpp": "85438fbb4cc15a935e003e92874fa1bec1bf8dc57bdd07168d1f86b72ed187b9",
+    "apps/jellyfin/mediatek/full/transport-stream.h": "ae2fff91f03ecd3bffa1737946336afe695af0a09865c60830e01ee32f62b36d"
+  }
+}

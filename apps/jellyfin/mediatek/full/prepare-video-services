@@ -1,0 +1,19 @@
+#!/bin/sh
+# SPDX-License-Identifier: AGPL-3.0-only
+set -eu
+base=/usr/local/lib/redmi-nas/mediatek
+/usr/bin/lxc-wait -n android -s RUNNING -t 25
+install -d -m755 /android/data/local/tmp/redmi-nas-video
+install -m755 "$base/surface-transcode" /android/data/local/tmp/redmi-nas-video/surface-transcode.new
+mv /android/data/local/tmp/redmi-nas-video/surface-transcode.new /android/data/local/tmp/redmi-nas-video/surface-transcode
+value=$(/usr/bin/lxc-attach -n android -- /system/bin/getprop debug.stagefright.ccodec)
+if test "$value" != 4; then
+ /usr/bin/lxc-attach -n android -- /system/bin/setprop debug.stagefright.ccodec 4
+ /usr/bin/lxc-attach -n android -- /system/bin/setprop ctl.restart minimedia
+fi
+for attempt in 1 2 3 4 5 6 7 8 9 10; do
+ if timeout -k 1 2 /usr/bin/lxc-attach -n android -- /system/bin/service check media.resource_manager | grep -q ': found'; then exit 0; fi
+ sleep 1
+done
+echo 'Android media resource manager did not become ready' >&2
+exit 1

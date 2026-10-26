@@ -1,20 +1,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1000" height="225" viewBox="0 0 1000 225" role="img" aria-labelledby="title desc">
  <title id="title">MediaTek H.264 video path</title>
- <desc id="desc">CPU decoding and scaling, then MediaTek VPU hardware H.264 encoding through ION DMA-BUF, followed by Jellyfin browser playback.</desc>
+ <desc id="desc">MediaTek hardware decoding, Mali GPU resizing, MediaTek H.264 hardware encoding and Jellyfin browser playback.</desc>
  <rect width="1000" height="225" rx="18" fill="#111c2a"/>
  <g font-family="sans-serif" text-anchor="middle">
-  <text x="500" y="36" fill="#f1f5f9" font-size="20" font-weight="bold">Redmi NAS · H.264 hardware encoding</text>
+  <text x="500" y="36" fill="#f1f5f9" font-size="20" font-weight="bold">Redmi NAS · Hardware video pipeline</text>
   <rect x="30" y="65" width="270" height="105" rx="12" fill="#233348"/>
-  <text x="165" y="103" fill="#fff" font-size="19">CPU</text>
-  <text x="165" y="135" fill="#bac8d8" font-size="16">Decode + resize</text>
+  <text x="165" y="103" fill="#fff" font-size="19">MediaTek + Mali</text>
+  <text x="165" y="135" fill="#bac8d8" font-size="16">Hardware decode + GPU resize</text>
   <path d="M314 118h48m-11-8 11 8-11 8" fill="none" stroke="#52d3b1" stroke-width="3"/>
   <rect x="375" y="65" width="270" height="105" rx="12" fill="#125b55"/>
   <text x="510" y="103" fill="#fff" font-size="19">MediaTek VPU</text>
-  <text x="510" y="135" fill="#c6f5e9" font-size="16">H.264 encode · ION/DMA-BUF</text>
+  <text x="510" y="135" fill="#c6f5e9" font-size="16">Hardware H.264 encode</text>
   <path d="M658 118h48m-11-8 11 8-11 8" fill="none" stroke="#52d3b1" stroke-width="3"/>
   <rect x="720" y="65" width="250" height="105" rx="12" fill="#233348"/>
   <text x="845" y="103" fill="#fff" font-size="19">Jellyfin → browser</text>
   <text x="845" y="135" fill="#bac8d8" font-size="16">720p HLS playback</text>
-  <text x="500" y="202" fill="#94a9c1" font-size="14">Verified on the project device · hardware decoding is not enabled</text>
+  <text x="500" y="202" fill="#94a9c1" font-size="14">H.264 / HEVC / VP9 SDR tested · audio and container handling still use the CPU</text>
  </g>
 </svg>

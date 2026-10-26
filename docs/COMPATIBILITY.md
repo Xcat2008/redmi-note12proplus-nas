@@ -14,10 +14,10 @@ Tested device: **Redmi Note 12 Pro+ 5G, 22101316UG / rubypro**, MediaTek MT6877 
 | USB | High-speed USB 2.0 observed. External Ethernet and storage share that bus. |
 | Wired video | Do not expect HDMI from a USB-C hub; this phone has no supported wired video output. |
 | Charging + USB host | Not yet validated with the intended hub and native Linux |
-| Bluetooth | Not working/validated: bluebinder reports a missing /dev/rfkill |
+| Bluetooth | HIDL/VHCI bridge working: controller registration, power toggle and discovery; physical pairing remains untested |
 | SIM / modem / mobile data | Not validated |
 | Cameras | Not validated; not a goal of this NAS build |
-| Hardware video encoding | H.264 MediaTek VPU confirmed in Jellyfin/FFmpeg through the ION/DMA-BUF adapter; software decoding and scaling |
+| Video acceleration | H.264 / HEVC / VP9 8-bit SDR hardware decode, Mali resize and H.264 hardware encode verified; other video paths may use CPU |
 
 The planned hub is an ICY BOX IB-DK4034a-CPD with a USB-C PD charger and three SATA 2.5-inch disks. These are planned accessories, not certified compatible hardware. Power available to each USB port and mechanical-disk spin-up current must be checked in a physical test. A 3.5-inch HDD requires an enclosure/adapter with its own suitable power supply.
 

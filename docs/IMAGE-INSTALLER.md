@@ -11,14 +11,18 @@ A clean candidate has been assembled separately from the author’s working NAS.
 | Fresh upstream Droidian base, verified archive digest | Prepared |
 | Author accounts, Wi-Fi profiles and SSH host keys excluded | Audited offline |
 | Android sparse image structure and file digests | Checked offline |
-| MediaTek video adapter and automatic Jellyfin profile | Compiled into the clean candidate; encoding tested on the running device |
+| MediaTek video adapter and automatic Jellyfin profile | Compiled into the clean candidate; full video chain tested on the running device |
+| RetroArch in Homeio, Ozone and native Mali rendering | Tested on the running device; included in the next candidate's setup |
+| Sunshine | Included in the gaming stack; TV/Moonlight streaming still needs validation |
 | Per-installation Linux PIN and SSH key | Implemented; no shared default credentials |
 | Windows installer | Built; default operation only verifies the package |
 | Model, unlocked bootloader, slot and partition-layout checks | Implemented |
 | Clean physical install, Wi-Fi onboarding, first NAS setup | Pending |
 | Complete binary redistribution and corresponding-source audit | Pending before public binaries |
 
-The candidate includes `/usr/local/lib/redmi-nas/mediatek`, its source, startup profile and the Homeio installation hook. New installations receive the H.264 encoding fix automatically; no personal Jellyfin account or copied library is included. Decoding and scaling remain on CPU.
+The candidate includes `/usr/local/lib/redmi-nas/mediatek`, its source, startup profile and the Homeio installation hook. New installations receive the hardware video bridge, persistent Bluetooth adaptation and RetroArch profile automatically; no personal Jellyfin account, copied library, controller pairing or media file is included. The video bridge uses MediaTek decoding and encoding with Mali resizing for the tested SDR formats.
+
+The gaming setup installs RetroArch and Sunshine as a Homeio-managed stack during the internet-connected first setup. It downloads pinned upstream packages and builds the local container image. Homeio's normal context menu starts, stops or uninstalls the stack. The phone's application menu is not used for this workflow. The native renderer uses Mali; browser capture and Sunshine currently encode video on the CPU. See [the gaming integration](../apps/retroarch/README.md).
 
 The target is specifically **22101316UG / rubypro, 256 GB**, using the documented factory firmware **OS2.0.16.0.UMOEUXM** and slot **a**. This is not an image for the 4G model, another Redmi, or an arbitrary partition layout.
 

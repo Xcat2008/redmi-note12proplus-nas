@@ -1,0 +1,15 @@
+[Unit]
+Description=Homeio gaming session with native Mali rendering
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/lib/redmi-nas/retroarch/homeio-session.py
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=20
+KillMode=mixed
+
+[Install]
+WantedBy=multi-user.target

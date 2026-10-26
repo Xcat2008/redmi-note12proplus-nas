@@ -85,5 +85,52 @@
     "fresh_store_install_verified": true,
     "empty_config_startup_verified": true,
     "clean_image_includes_adapter": true
+  },
+  "retroarch": {
+    "version": "1.20.0+dfsg-2+b1",
+    "assets": "1.20.0+dfsg-1",
+    "core_info": "1.20.0-1",
+    "default_packaged_cores": [
+      "Nestopia",
+      "Gambatte"
+    ],
+    "joypad_profiles": {
+      "commit": "7f94f847057c0829d4e18df27e50930728507f83",
+      "url": "https://codeload.github.com/libretro/retroarch-joypad-autoconfig/tar.gz/7f94f847057c0829d4e18df27e50930728507f83",
+      "sha256": "725fbc7f1e64440d2a44e183769947f2c9d1495b4a9db9ece14a71d972049201"
+    },
+    "graphics_verified": "Mali-G68 MC4 / OpenGL ES 3.2 / Wayland",
+    "audio_backend_verified": "PulseAudio",
+    "physical_xbox_controller_verified": false,
+    "ps2_gameplay_verified": false,
+    "moonlight_streaming_verified": false
+  },
+  "bluetooth": {
+    "upstream": {
+      "url": "https://github.com/mer-hybris/bluebinder",
+      "commit": "ebab7c3c3fb15f0eea4db0ff14837066a716f973",
+      "original_source_sha256": "7cd90d5f03f3151f4eb42606b55f17bfae32f6775709c0695acd9fe357b3a47b"
+    },
+    "kernel_modules": [
+      "hci_vhci",
+      "hidp"
+    ],
+    "missing_rfkill_handled": true,
+    "power_and_discovery_tested": true,
+    "physical_pairing_tested": false
+  },
+  "mediatek_full_video": {
+    "hardware_decoders_tested": [
+      "c2.mtk.avc.decoder",
+      "c2.mtk.hevc.decoder",
+      "c2.mtk.vp9.decoder"
+    ],
+    "gpu": "Mali-G68 MC4 / OpenGL ES / EGL native fences",
+    "hardware_encoder": "c2.mtk.avc.encoder",
+    "browser_1080p_to_720p_tested": true,
+    "browser_seek_tested": true,
+    "hdr_tone_mapping_tested": false,
+    "kernel_pid_max": 65535,
+    "runtime_hashes": "hardware/runtime-lock.json"
   }
 }

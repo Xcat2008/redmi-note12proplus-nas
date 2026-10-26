@@ -17,6 +17,10 @@ test -d /userdata/DATA
 desktop_uid=$(id -u "$desktop_user")
 test -S "/run/user/$desktop_uid/bus"
 repo=$(cd "$(dirname "$0")/.." && pwd)
+test -f "${REDMI_NAS_HARDWARE_BUNDLE:-/usr/share/redmi-nas-hardware}/SHA256SUMS" || {
+ echo 'The matching hardware bundle is required. See apps/jellyfin/mediatek/full/README.md.' >&2
+ exit 1
+}
 echo 'Preflight: correct ARM64 native kernel, Debian base, data mount and desktop session.'
 if [ -e /opt/home-server ]; then
  echo 'Homeio is already installed. This installer will not overwrite it.'
@@ -74,5 +78,8 @@ systemctl enable --now docker
 docker run --rm hello-world
 bash "$repo/scripts/install-phone-adaptations.sh" "$desktop_user"
 bash "$repo/scripts/install-mediatek-video.sh"
+bash "$repo/scripts/install-hardware-services.sh"
+bash "$repo/scripts/install-retroarch.sh" --install "$desktop_user"
 bash "$repo/homeio/installer/install-homeio-native-phone.sh"
+bash "$repo/scripts/install-homeio-gaming.sh"
 echo 'NAS setup finished. Open http://redmi-nas.local and create your Homeio account.'

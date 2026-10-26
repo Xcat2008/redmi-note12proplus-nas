@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=RetroArch
+Comment=Multi-system games on the Redmi NAS
+Exec=/usr/local/bin/redmi-retroarch
+Icon=retroarch
+Terminal=false
+Categories=Game;Emulator;
+StartupNotify=true

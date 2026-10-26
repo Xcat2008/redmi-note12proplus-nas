@@ -1,0 +1,88 @@
+name: custom-retroarch
+services:
+  retroarch:
+    image: redmi-nas/retroarch-sunshine:2026.10.26
+    pull_policy: never
+    build:
+      context: /usr/local/share/redmi-nas/gaming
+    container_name: retroarch
+    environment:
+      PUID: '32011'
+      PGID: '32011'
+      TZ: Europe/Lisbon
+      TITLE: RetroArch
+      PIXELFLUX_WAYLAND: 'false'
+      LIBGL_ALWAYS_SOFTWARE: 'true'
+      GALLIUM_DRIVER: llvmpipe
+      LP_NUM_THREADS: "2"
+      SELKIES_MANUAL_RESOLUTION: "true"
+      SELKIES_MANUAL_WIDTH: "1280"
+      SELKIES_MANUAL_HEIGHT: "720"
+      SELKIES_FRAMERATE: "30"
+      SELKIES_SECOND_SCREEN: "false"
+      SELKIES_ENCODER: h264enc
+      SELKIES_VIDEO_CRF: "28"
+      NO_WEBCAM: 'true'
+      NO_STEAM: 'true'
+      SELKIES_GAMEPAD_ENABLED: 'true'
+      SELKIES_UINPUT_GAMEPAD: 'true'
+      SELKIES_USE_BROWSER_CURSORS: 'true'
+      SELKIES_MICROPHONE_ENABLED: 'false'
+      SELKIES_CLIPBOARD_ENABLED: 'false'
+    ports:
+      - target: 3000
+        published: '3300'
+        host_ip: 127.0.0.1
+        protocol: tcp
+      - target: 47984
+        published: '47984'
+        protocol: tcp
+      - target: 47989
+        published: '47989'
+        protocol: tcp
+      - target: 47990
+        published: '47990'
+        host_ip: 127.0.0.1
+        protocol: tcp
+      - target: 48010
+        published: '48010'
+        protocol: tcp
+      - target: 47998
+        published: '47998'
+        protocol: udp
+      - target: 47999
+        published: '47999'
+        protocol: udp
+      - target: 48000
+        published: '48000'
+        protocol: udp
+    group_add:
+      - '3011'
+    devices:
+      - /dev/uinput:/dev/uinput
+    shm_size: 1gb
+    restart: unless-stopped
+    volumes:
+      - type: bind
+        source: /DATA/AppData/custom-retroarch/config
+        target: /config
+      - type: bind
+        source: /DATA/Games
+        target: /games
+      - type: bind
+        source: /dev/input
+        target: /dev/input
+        read_only: true
+x-casaos:
+  main: retroarch
+  title:
+    en_us: RetroArch
+    pt_pt: RetroArch
+  icon: /retroarch-icon.svg
+  category: Games
+  scheme: https
+  port_map: '3443'
+  index: /
+  description:
+    en_us: RetroArch with native Mali rendering, browser access and Sunshine for Moonlight.
+    pt_pt: RetroArch com GPU Mali, acesso pelo browser e Sunshine para Moonlight.

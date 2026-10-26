@@ -1,0 +1,17 @@
+[Unit]
+Description=Redmi hardware video bridge
+Requires=lxc@android.service
+After=lxc@android.service systemd-sysctl.service
+
+[Service]
+Type=simple
+ExecStartPre=/usr/local/lib/redmi-nas/mediatek/prepare-video-services
+ExecStart=/usr/bin/python3 /usr/local/lib/redmi-nas/mediatek/broker.py
+Restart=on-failure
+RestartSec=3
+TimeoutStartSec=60
+KillMode=control-group
+UMask=0027
+
+[Install]
+WantedBy=multi-user.target

@@ -21,6 +21,10 @@
 | FFmpeg contributors | FFmpeg / Jellyfin FFmpeg, native V4L2 encoder and media processing | https://ffmpeg.org/ · https://github.com/jellyfin/jellyfin-ffmpeg |
 | Jellyfin contributors and LinuxServer.io | Media server and ARM64 container image used in the test | https://jellyfin.org/ · https://github.com/linuxserver/docker-jellyfin |
 | CasaOS AppStore contributors / IceWhale | App catalog consumed by Homeio; Jellyfin template adapted for this phone | https://github.com/IceWhaleTech/CasaOS-AppStore |
+| BlueZ and mer-hybris / bluebinder contributors | Bluetooth stack and original HIDL/VHCI bridge, adapted for this kernel | https://www.bluez.org/ · https://github.com/mer-hybris/bluebinder |
+| RetroArch and Libretro contributors | Multi-system frontend, emulator cores and controller profiles | https://www.retroarch.com/ · https://www.libretro.com/ |
+| LinuxServer.io and Selkies contributors | Container base and browser streaming session for the Homeio gaming stack | https://github.com/linuxserver/docker-retroarch · https://github.com/selkies-project/selkies |
+| LizardByte / Sunshine and Moonlight contributors | Game streaming server and compatible clients | https://github.com/LizardByte/Sunshine · https://moonlight-stream.org/ |
 | Android Open Source Project / LLVM | Boot image tooling and compiler infrastructure | https://android.googlesource.com/ · https://llvm.org/ |
 
 Thanks to the maintainers, documentation authors and people who report reproducible issues. None of these projects or companies has endorsed this experiment. Please retain upstream credits when reusing the adaptations, and consider supporting the upstream projects as well.

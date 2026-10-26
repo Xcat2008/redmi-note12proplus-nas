@@ -6,6 +6,7 @@ This repository contains a source/configuration adaptation, not a replacement ow
 | --- | --- | --- |
 | Linux kernel configuration and module source patches | MiCode public ruby / MTK kernel module trees, themselves based on Linux and MediaTek sources | GPL-2.0-only, subject to individual upstream file notices |
 | Homeio hardware reporting changes and reviewed installer functions | doctor-io/homeio v1.10.3 | AGPL-3.0-only |
+| Mobile Power Saver CPU/profile patch and adapted native daemon | Cédric Bellegarde and Droidian Mobile Power Saver contributors | GPL-3.0 (upstream COPYING); pinned corresponding source and patch in hardware/power/ |
 | Display wake, MediaTek DMA-BUF adapter and integration scripts | José Miranda (Xcat2008), this project | AGPL-3.0-only |
 | Bluetooth bridge adaptation | mer-hybris/bluebinder and its original Jolla/Intel contributors; local HIDL/VHCI adaptation | GPL-2.0-or-later; see hardware/bluetooth/COPYING and per-file notices |
 | Native video bridge, transport writer and broker | José Miranda (Xcat2008), this project | AGPL-3.0-only |

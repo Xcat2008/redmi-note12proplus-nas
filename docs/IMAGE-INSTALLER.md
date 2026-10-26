@@ -15,6 +15,7 @@ A clean candidate has been assembled separately from the author’s working NAS.
 | RetroArch in Homeio, Ozone and native Mali rendering | Tested on the running device; included in the next candidate's setup |
 | Sunshine | Included in the gaming stack; TV/Moonlight streaming still needs validation |
 | Bluetooth controls in Homeio | First-setup source included; authenticated radio controls tested on the running NAS, physical pairing pending |
+| CPU energy profiles | Corrected native power manager and Homeio controls included; factory CPU/GPU/memory scaling tested on the running device |
 | Per-installation Linux PIN and SSH key | Implemented; no shared default credentials |
 | Windows installer | Built; default operation only verifies the package |
 | Model, unlocked bootloader, slot and partition-layout checks | Implemented |

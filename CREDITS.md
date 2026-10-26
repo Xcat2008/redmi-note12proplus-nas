@@ -15,6 +15,7 @@
 | Linux kernel contributors | Kernel and driver infrastructure | https://kernel.org/ |
 | Xiaomi / MiCode and MediaTek source contributors | Public ruby kernel and connectivity-module source | https://github.com/MiCode/Xiaomi_Kernel_OpenSource · https://github.com/MiCode/MTK_kernel_modules |
 | Phosh, Phoc and wlroots contributors | Mobile desktop, compositor and display/input stack | https://phosh.mobi/ · https://gitlab.freedesktop.org/wlroots/wlroots |
+| Cédric Bellegarde and Mobile Power Saver contributors | Native Droidian power management, adapted for persistent CPU energy profiles | https://github.com/droidian/mobile-power-saver |
 | Homeio / doctor-io contributors | Web desktop, app store, file and server management | https://github.com/doctor-io/homeio |
 | Docker, Moby, containerd and runc contributors | Container engine and runtime | https://www.docker.com/ · https://github.com/moby/moby · https://containerd.io/ · https://github.com/opencontainers/runc |
 | PostgreSQL, nginx, Samba, Avahi and NetworkManager communities | Database, reverse proxy, file sharing and networking components | https://www.postgresql.org/ · https://nginx.org/ · https://www.samba.org/ · https://avahi.org/ · https://networkmanager.dev/ |

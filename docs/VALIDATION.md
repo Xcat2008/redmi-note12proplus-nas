@@ -23,6 +23,10 @@ The permanent Homeio materialization hook then passed six regression tests, ESLi
 
 The native BlueZ panel passed six service tests. Browser checks verified radio power on/off, discovery, stopping a search, automatic stop after 45 seconds and discovery continuing while switching Settings sections. Unauthenticated requests, cross-origin mutations and malformed device addresses were rejected. The Next.js production build and server TypeScript build passed. Physical controller pairing and button input remain untested.
 
+## Energy and hardware scaling
+
+The native power manager now applies and persists the three CPU profiles, uses schedutil as its NAS balanced baseline and prevents screen-off dozing from overriding that policy. Native tests covered both clusters and profile persistence across power-daemon reactivation. Homeio's three controls, authentication, origin checks and rejection of an unvalidated overclock request passed browser tests. GPU frequency scaled from 385 to 950 MHz during an offscreen Mali GLES workload; a 512 MiB full-buffer copy/integrity probe reached the highest DDR operating point without a mismatch. Details and limits are in [ENERGY.md](ENERGY.md).
+
 ## Not yet established
 
 - Hub host-mode operation with simultaneous PD charging.

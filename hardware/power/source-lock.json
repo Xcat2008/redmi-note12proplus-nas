@@ -1,0 +1,11 @@
+{
+  "project": "Droidian Mobile Power Saver",
+  "upstream": "https://github.com/droidian/mobile-power-saver",
+  "commit": "477f4f666528a3ccdb45d6549e669019304a338e",
+  "archive_url": "https://codeload.github.com/droidian/mobile-power-saver/tar.gz/477f4f666528a3ccdb45d6549e669019304a338e",
+  "archive_sha256": "82d5be8334ccf1fc172bfe11c48a7eec5b470d9f6f4d6579a42c0f143512e4eb",
+  "patch_sha256": "45f3750d3e68ac073bd9fab9ad442eac0755fd5ebc8762d153827d434f9976f7",
+  "tested_binary_sha256": "c1dde3385ad547ff9a149b5a31e5b354ea4728ce1bb5eb8a7d88b90a138df725",
+  "runtime_version": "0.9.7-redmi-nas1",
+  "license": "GPL-3.0 (upstream COPYING)"
+}

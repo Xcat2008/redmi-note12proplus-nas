@@ -76,6 +76,7 @@ apt-get install -y --no-remove --no-install-recommends \
  'docker-compose-plugin=5.6.1-1~debian.13~trixie'
 systemctl enable --now docker
 docker run --rm hello-world
+bash "$repo/scripts/install-energy-profiles.sh"
 bash "$repo/scripts/install-phone-adaptations.sh" "$desktop_user"
 bash "$repo/scripts/install-mediatek-video.sh"
 bash "$repo/scripts/install-hardware-services.sh"

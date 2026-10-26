@@ -1,0 +1,49 @@
+--- a/modules/settings/components/settings.tsx
++++ b/modules/settings/components/settings.tsx
+@@ -22,7 +22,7 @@
+ import { cn } from "@/lib/utils";
+ 
+ const SIDEBAR_GROUPS: { label: string; ids: SettingsSectionId[] }[] = [
+-  { label: "System",         ids: ["general", "appearance", "updates"] },
++  { label: "System",         ids: ["general", "appearance", "updates", "performance"] },
+   { label: "Infrastructure", ids: ["network", "bluetooth", "storage", "docker"] },
+   { label: "Integrations",  ids: ["integrations"] },
+   { label: "Automation",     ids: ["scheduled-tasks", "backup"] },
+--- a/modules/settings/components/panel/types.ts
++++ b/modules/settings/components/panel/types.ts
+@@ -15,6 +15,7 @@
+   | "general"
+   | "network"
+   | "bluetooth"
++  | "performance"
+   | "storage"
+   | "docker"
+   | "integrations"
+--- a/modules/settings/components/panel/registry.tsx
++++ b/modules/settings/components/panel/registry.tsx
+@@ -39,6 +39,8 @@
+ 
+ import { BluetoothSection, BluetoothIcon } from "@/modules/settings/components/panel/sections/bluetooth-section";
+ 
++import { PerformanceSection, PerformanceIcon } from "@/modules/settings/components/panel/sections/performance-section";
++
+ export const SETTINGS_SECTIONS: SettingsSection[] = [
+   // System
+   { id: "general",          label: "General",          icon: ServerRegular       },
+@@ -61,6 +63,7 @@
+   { id: "power",            label: "Power",            icon: PowerRegular        },
+   { id: "advanced",         label: "Advanced",         icon: WrenchRegular       },
+   { id: "bluetooth",        label: "Bluetooth",        icon: BluetoothIcon       },
++  { id: "performance",      label: "Performance",      icon: PerformanceIcon     },
+ ];
+ 
+ type SettingsRegistryContext = {
+@@ -174,6 +177,8 @@
+       save: getDefaultSaveConfig(context.settingsBackend, "updates"),
+     },
+ 
++    { ...SETTINGS_SECTIONS[15], liveApply: true, render: () => <PerformanceSection /> },
++
+     { ...SETTINGS_SECTIONS[14], liveApply: true, render: () => <BluetoothSection /> },
+ 
+     // ── Infrastructure ───────────────────────────────────────────────────

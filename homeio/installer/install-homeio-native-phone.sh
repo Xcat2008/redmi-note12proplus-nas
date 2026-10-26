@@ -44,6 +44,8 @@ git -C "$INSTALL_DIR" apply --check "$project_root/homeio/jellyfin-hardware-comp
 git -C "$INSTALL_DIR" apply "$project_root/homeio/jellyfin-hardware-compat.patch"
 git -C "$INSTALL_DIR" apply --check "$project_root/homeio/bluetooth-settings.patch"
 git -C "$INSTALL_DIR" apply "$project_root/homeio/bluetooth-settings.patch"
+git -C "$INSTALL_DIR" apply --check "$project_root/homeio/energy-profiles.patch"
+git -C "$INSTALL_DIR" apply "$project_root/homeio/energy-profiles.patch"
 python3 - "$INSTALL_DIR" <<'PY'
 from pathlib import Path
 import json, sys

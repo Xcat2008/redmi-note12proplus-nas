@@ -1,0 +1,149 @@
+--- a/system/freq_device.c
++++ b/system/freq_device.c
+@@ -153,6 +153,19 @@
+         if (self->priv->default_governor != NULL)
+             g_free (self->priv->default_governor);
+ 
++        /* NAS balanced mode must not cache a boot-time powersave governor. */
++        if (g_strcmp0 (g_getenv ("REDMI_NAS_MODE"), "1") == 0 &&
++            g_strcmp0 (self->priv->governor_node, "scaling_governor") == 0) {
++            g_autofree char *available = NULL;
++            g_autofree char *path = g_build_filename (
++                self->priv->sysfs_dir, device_name,
++                "scaling_available_governors", NULL);
++            if (g_file_get_contents (path, &available, NULL, NULL) &&
++                g_strstr_len (available, -1, "schedutil") != NULL) {
++                g_free (contents);
++                contents = g_strdup ("schedutil");
++            }
++        }
+         self->priv->default_governor = g_steal_pointer (&contents);
+         g_message("default governor: %s -> %s",
+                   filename,
+--- a/system/manager.c
++++ b/system/manager.c
+@@ -215,7 +215,10 @@
+     } else if (g_strcmp0 (setting, "little-cluster-powersave") == 0) {
+         gboolean enabled = g_variant_get_boolean (inner_value);
+ 
+-        cpufreq_set_powersave (self->priv->cpufreq, enabled, TRUE);
++        /* Display-independent NAS work must keep its chosen CPU profile. */
++        if (!(enabled && !self->priv->screen_off_power_saving &&
++              g_strcmp0 (g_getenv ("REDMI_NAS_MODE"), "1") == 0))
++    cpufreq_set_powersave (self->priv->cpufreq, enabled, TRUE);
+     } else if (g_strcmp0 (setting, "radio-power-saving") == 0) {
+         self->priv->radio_power_saving = g_variant_get_boolean (inner_value);
+     } else if (g_strcmp0 (setting, "dozing") == 0) {
+@@ -398,6 +401,12 @@
+         G_CALLBACK (on_bus_setting_changed),
+         self
+     );
++
++    if (g_strcmp0 (g_getenv ("REDMI_NAS_MODE"), "1") == 0) {
++        Bus *bus = bus_get_default ();
++        set_power_profile (self, (PowerProfile) bus_get_power_profile (bus));
++        g_object_unref (bus);
++    }
+ }
+ 
+ /**
+--- a/system/bus.c
++++ b/system/bus.c
+@@ -92,6 +92,31 @@
+ }
+ 
+ static void
++profile_changed (Bus *self, PowerProfile profile)
++{
++    GVariantBuilder changed;
++    self->priv->power_profile = profile;
++    if (g_strcmp0 (g_getenv ("REDMI_NAS_MODE"), "1") == 0) {
++        g_mkdir_with_parents ("/var/lib/redmi-nas", 0755);
++        g_file_set_contents ("/var/lib/redmi-nas/energy-profile",
++                             get_power_profile_as_string (profile), -1, NULL);
++    }
++    g_signal_emit (self, signals[BUS_SETTING_CHANGED], 0,
++                   g_variant_new ("(sv)", "power-saving-mode",
++                                  g_variant_new_int32 (profile)));
++    if (self->priv->upowerpp_connection != NULL) {
++        g_variant_builder_init (&changed, G_VARIANT_TYPE ("a{sv}"));
++        g_variant_builder_add (&changed, "{sv}", "ActiveProfile",
++                                g_variant_new_string (get_power_profile_as_string (profile)));
++        g_dbus_connection_emit_signal (self->priv->upowerpp_connection,
++            NULL, UPOWERPP_DBUS_PATH, DBUS_PROPERTIES_INTERFACE,
++            "PropertiesChanged",
++            g_variant_new ("(s@a{sv}@as)", UPOWERPP_DBUS_NAME,
++                g_variant_builder_end (&changed), g_variant_new_strv (NULL, 0)), NULL);
++    }
++}
++
++static void
+ handle_method_call (GDBusConnection       *connection,
+                     const char           *sender,
+                     const char           *object_path,
+@@ -126,6 +151,15 @@
+         g_autoptr (GVariant) value;
+ 
+         g_variant_get (parameters, "(&sv)", &setting, &value);
++        if (g_strcmp0 (setting, "power-saving-mode") == 0 &&
++            g_variant_is_of_type (value, G_VARIANT_TYPE_INT32)) {
++            gint profile = g_variant_get_int32 (value);
++            if (profile >= 0 && profile < POWER_PROFILE_LAST) {
++                profile_changed (self, (PowerProfile) profile);
++                g_dbus_method_invocation_return_value (invocation, NULL);
++                return;
++            }
++        }
+         g_signal_emit(
+             self,
+             signals[BUS_SETTING_CHANGED],
+@@ -197,9 +231,14 @@
+     if (g_strcmp0 (property_name, "ActiveProfile") == 0) {
+         const char *power_profile = g_variant_get_string (value, NULL);
+ 
+-        self->priv->power_profile = get_power_profile_from_string (
+-            power_profile
+-        );
++        if (g_strcmp0 (power_profile, "balanced") != 0 &&
++            g_strcmp0 (power_profile, "performance") != 0 &&
++            g_strcmp0 (power_profile, "power-saver") != 0) {
++            g_set_error (error, G_DBUS_ERROR, G_DBUS_ERROR_INVALID_ARGS,
++                         "Unknown power profile");
++            return FALSE;
++        }
++        profile_changed (self, get_power_profile_from_string (power_profile));
+ 
+ 
+         return TRUE;
+@@ -390,6 +429,11 @@
+     );
+ 
+     self->priv->power_profile = POWER_PROFILE_BALANCED;
++    if (g_strcmp0 (g_getenv ("REDMI_NAS_MODE"), "1") == 0) {
++        g_autofree char *saved = NULL;
++        if (g_file_get_contents ("/var/lib/redmi-nas/energy-profile", &saved, NULL, NULL))
++            self->priv->power_profile = get_power_profile_from_string (g_strstrip (saved));
++    }
+     self->priv->adishatz_connection = NULL;
+     self->priv->upowerpp_connection = NULL;
+ }
+@@ -461,3 +505,9 @@
+         NULL
+     );
+ }
++
++gint
++bus_get_power_profile (Bus *self)
++{
++    return self->priv->power_profile;
++}
+--- a/system/bus.h
++++ b/system/bus.h
+@@ -46,6 +46,7 @@
+ Bus        *bus_get_default          (void);
+ void        bus_screen_state_changed (Bus      *self,
+                                       gboolean  enabled);
++gint        bus_get_power_profile    (Bus *self);
+ void        bus_free_default         (void);
+ 
+ G_END_DECLS

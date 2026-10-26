@@ -54,6 +54,7 @@ The original device has been tested, but the public procedure has not yet been r
 | Jellyfin | Real 1080p → 720p browser playback with hardware decode, Mali resize and hardware H.264 encode; seeking verified |
 | Physical power and volume buttons | Working with the documented adaptations |
 | CPU / GPU / RAM reporting | ARM hardware reporting patch included |
+| CPU energy profiles | Homeio controls Power saver / Balanced / Performance; corrected native policy, factory limits and automatic GPU/memory DVFS |
 | USB hub, simultaneous charging and external disks | Not yet tested |
 | Bluetooth | Radio power and discovery verified from Homeio Settings; controller pairing controls included, physical pairing remains untested |
 | SIM / mobile data and cameras | Not validated |
@@ -73,6 +74,7 @@ The fix is included in the clean image candidate and in the automatic NAS instal
 - Source revisions and compatibility patches for the connectivity modules.
 - The display wake bridge and NAS power-policy setup.
 - Homeio ARM hardware-reporting changes, with fixture tests.
+- [CPU energy profiles and hardware-scaling validation](docs/ENERGY.md).
 - [Bluetooth controls in Homeio Settings](docs/BLUETOOTH.md), without using the phone's screen.
 - The MediaTek DMA-BUF adapter, automatically configured for fresh Jellyfin store installs.
 - The Jellyfin compatibility fix and a portable software-mode compose example.

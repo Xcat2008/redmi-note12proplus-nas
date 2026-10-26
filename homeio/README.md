@@ -29,3 +29,9 @@ node --test lib/server/modules/bluetooth/service.test.mjs
 ```
 
 Physical Xbox/PlayStation pairing and in-game input remain separate validation steps. For Moonlight on a TV, connect the controller to that TV; its input reaches Sunshine over the streaming connection. See [Bluetooth setup](../docs/BLUETOOTH.md).
+
+## Native energy profiles
+
+Apply `energy-profiles.patch` after the Bluetooth patch and copy its implementation from `new-files/`. Settings gains a Performance section with the three native CPU profiles, live cluster governors, GPU telemetry and physical/usable/available RAM. The adapted native power service must be installed through `scripts/install-energy-profiles.sh`; changing a UI label alone does not change CPU behavior.
+
+The API requires a session and a matching origin for mutations. It accepts only Power saver, Balanced and Performance and verifies the resulting CPU governors. Overclock controls remain disabled because above-stock operating points have not been validated. Three parsing/validation tests and native/browser profile checks passed. See [energy behavior and tests](../docs/ENERGY.md).

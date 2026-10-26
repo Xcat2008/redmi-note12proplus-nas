@@ -5,7 +5,7 @@ Tested device: **Redmi Note 12 Pro+ 5G, 22101316UG / rubypro**, MediaTek MT6877 
 | Component | Verified result / limit |
 | --- | --- |
 | CPU | 8 online physical cores: 6 Cortex-A55 up to 2.0 GHz + 2 Cortex-A78 up to 2.6 GHz; no SMT |
-| CPU policy | schedutil on both clusters; stock maximum frequencies and thermal limits retained |
+| CPU policy | Balanced uses schedutil on both clusters; persistent Homeio profiles and the native power-service correction retain factory limits and thermal protection |
 | RAM | 8 GiB physical; Linux MemTotal approximately 7.3–7.4 GiB because of reserved memory. Shared GPU memory is not extra RAM. |
 | GPU | ARM Mali-G68 MC4, real OpenGL ES 3.2 rendering in Phoc. It is not NVIDIA. |
 | Display | 1080 × 2400, mobile UI scale 3; a wake bridge reapplies vendor brightness after DPMS wake |

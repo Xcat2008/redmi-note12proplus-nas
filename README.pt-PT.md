@@ -25,7 +25,7 @@ Capturas reais do Homeio, feitas em 26 de outubro de 2026. O servidor está no t
 
 ![Memória reconhecida pelo Linux](docs/screenshots/homeio-memory.png)
 
-O aparelho tem 8 GiB de RAM física; o Linux apresenta cerca de 7,4 GiB após as reservas da plataforma. Os valores de utilização variam. A identificação da GPU está confirmada; os testes de transcodificação MediaTek por hardware falharam na configuração atual. A transcodificação por CPU passou no teste; consulta a [validação](docs/VALIDATION.md). Os identificadores da rede foram ocultados e o atalho do Jellyfin foi retirado apenas das capturas. [Notas das imagens](docs/SCREENSHOTS.md).
+O aparelho tem 8 GiB de RAM física; o Linux apresenta cerca de 7,4 GiB após as reservas da plataforma. Os valores de utilização variam. A identificação da GPU está confirmada; a transcodificação por hardware no Jellyfin ainda precisa de teste. Os identificadores da rede foram ocultados e o atalho do Jellyfin foi retirado apenas das capturas. [Notas das imagens](docs/SCREENSHOTS.md).
 
 </details>
 
@@ -35,7 +35,7 @@ Esta é uma **prévia técnica com código-fonte, configurações e notas de ins
 
 O aparelho usado é o **Redmi Note 12 Pro+ 5G, modelo 22101316UG (rubypro)**, com Dimensity 1080, 8 GiB de RAM física e 256 GB de armazenamento. Não usar imagens do modelo 4G ou de outro telemóvel.
 
-Confirmámos Linux nativo, Wi-Fi, Homeio, Docker ARM64, arranque automático e funcionamento da NAS com o ecrã apagado. O Jellyfin reproduziu um vídeo H.264 em 1080p diretamente no browser e transcodificou-o para 720p por CPU. A aceleração de vídeo MediaTek falhou nos testes desta instalação. O modelo da loja foi adaptado para dispensar dispositivos de vídeo do Raspberry Pi. Hub, carregamento simultâneo com USB e discos externos ainda não foram ensaiados; SIM, Bluetooth e câmaras não estão validados.
+Confirmámos Linux nativo, Wi-Fi, Homeio, Docker ARM64, arranque automático e funcionamento da NAS com o ecrã apagado. O Jellyfin também abre pela rede, depois de adaptar o modelo da loja que exigia dispositivos de vídeo do Raspberry Pi. A reprodução de filmes ainda precisa de teste. Hub, carregamento simultâneo com USB e discos externos ainda não foram ensaiados; SIM, Bluetooth e câmaras não estão validados.
 
 ## Como começar
 

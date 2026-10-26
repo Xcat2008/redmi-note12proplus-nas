@@ -20,11 +20,11 @@ function volumeTarget(entry: unknown): string | undefined {
   }
 }
 
-/** Opt-in software video mode for this port, including fresh catalog installs.
+/** Opt-in device compatibility and MediaTek encoding for fresh catalog installs.
  * Keep unrelated apps and hardware requirements intact. Never add privileges.
  */
 export function adaptComposeForHardwareProfile(
-  appId: string, source: string, profile: string,
+  appId: string, source: string, profile: string, mediatekVideo = false,
 ): string {
   if (profile.trim() !== "redmi-ruby-nas" || appId !== "jellyfin") return source;
   const document = yaml.load(source) as { services?: Record<string, Record<string, unknown>> } | null;
@@ -35,6 +35,34 @@ export function adaptComposeForHardwareProfile(
     const image = typeof service.image === "string" ? service.image : "";
     if (!/^(?:lscr\.io\/)?linuxserver\/jellyfin(?::|@|$)/.test(image) &&
         !/^(?:docker\.io\/)?jellyfin\/jellyfin(?::|@|$)/.test(image)) continue;
+    if (mediatekVideo && /^(?:lscr\.io\/)?linuxserver\/jellyfin(?::|@|$)/.test(image)) {
+      // Keep the validated userspace ABI consistent for reproducible installs.
+      service.image = "linuxserver/jellyfin:12.2ubu2604-ls53";
+      const environment = Array.isArray(service.environment)
+        ? Object.fromEntries(service.environment.map((entry: unknown) => {
+          const value = String(entry); const at = value.indexOf("=");
+          return at < 0 ? [value, null] : [value.slice(0, at), value.slice(at + 1)];
+        })) : { ...(service.environment as Record<string, unknown> ?? {}) };
+      environment.FFMPEG_PATH = "/mediatek/ffmpeg";
+      environment.ATTACHED_DEVICES_PERMS = "/dev/video1 /dev/video2 /dev/ion";
+      service.environment = environment;
+      const devices: unknown[] = Array.isArray(service.devices) ? [...service.devices] : [];
+      for (const node of ["/dev/video1", "/dev/video2", "/dev/ion"]) {
+        if (!devices.some(entry => hostDevice(entry) === node)) devices.push(`${node}:${node}:rwm`);
+      }
+      service.devices = devices;
+      const volumes: unknown[] = Array.isArray(service.volumes) ? [...service.volumes] : [];
+      for (const [source, target] of [
+        ["/usr/local/lib/redmi-nas/mediatek", "/mediatek"],
+        ["/usr/local/lib/redmi-nas/mediatek/init", "/custom-cont-init.d"],
+      ]) {
+        if (!volumes.some(entry => volumeTarget(entry) === target)) {
+          volumes.push({ type: "bind", source, target, read_only: true });
+        }
+      }
+      service.volumes = volumes;
+      changed = true;
+    }
     if (Array.isArray(service.devices)) {
       const devices = service.devices.filter(entry => !OPTIONAL_JELLYFIN_GPU_DEVICES.has(hostDevice(entry) ?? ""));
       if (devices.length !== service.devices.length) {

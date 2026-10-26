@@ -33,7 +33,7 @@ These are live Homeio captures from the project device, taken on 26 October 2026
 
 ![Memory reported by Linux](docs/screenshots/homeio-memory.png)
 
-The phone has 8 GiB of physical RAM. Linux reports about 7.4 GiB after platform reservations. Live readings fluctuate. GPU identification is confirmed; Jellyfin hardware transcoding is still untested. Network identifiers are hidden, and the Jellyfin shortcut is omitted for the capture. See [capture notes](docs/SCREENSHOTS.md).
+The phone has 8 GiB of physical RAM. Linux reports about 7.4 GiB after platform reservations. Live readings fluctuate. Mali graphics and MediaTek H.264 hardware encoding are confirmed separately; video decoding and scaling still use the CPU. Network identifiers are hidden, and the Jellyfin shortcut is omitted for the capture. See [capture notes](docs/SCREENSHOTS.md).
 
 </details>
 
@@ -51,12 +51,20 @@ The original device has been tested, but the public procedure has not yet been r
 | Automatic NAS startup after reboot | Working |
 | NAS stays available with display off | Working after the mobile-power-saver fix |
 | Docker ARM64 container | Working |
-| Jellyfin | ARM64 container and web interface working with persistent Raspberry Pi device-mapping compatibility; media playback still to be tested |
+| Jellyfin | Real browser playback and 1080p → 720p H.264 hardware encoding verified; automatic profile survives catalog reinstall |
 | Physical power and volume buttons | Working with the documented adaptations |
 | CPU / GPU / RAM reporting | ARM hardware reporting patch included |
 | USB hub, simultaneous charging and external disks | Not yet tested |
 | Bluetooth, SIM / mobile data and cameras | Not validated; Bluetooth currently reports a missing rfkill device |
-| Jellyfin hardware transcoding | Not validated |
+| Jellyfin hardware encoding | H.264 through the MediaTek VPU; decoding and scaling remain on CPU |
+
+## H.264 encoding on MediaTek
+
+![MediaTek video path](docs/assets/mediatek-video.svg)
+
+The new adapter connects FFmpeg’s V4L2 encoder to the vendor kernel’s ION/DMA-BUF interface. Jellyfin selects `h264_v4l2m2m` and uses the phone’s **MediaTek video engine**, independently of the Mali desktop GPU. A real 1080p → 720p browser stream ran at roughly 60–65 encoding frames/s in the test. Playback remained active in both the restart and reinstall checks. These are results from one device and one video, not a throughput guarantee.
+
+The fix is included in the clean image candidate and in the automatic NAS installer. Homeio applies the devices, permissions, FFmpeg path and first-run encoding profile when Jellyfin is installed from the store. [Technical details and validation](docs/MEDIATEK-VIDEO.md).
 
 ## What is included
 
@@ -64,7 +72,8 @@ The original device has been tested, but the public procedure has not yet been r
 - Source revisions and compatibility patches for the connectivity modules.
 - The display wake bridge and NAS power-policy setup.
 - Homeio ARM hardware-reporting changes, with fixture tests.
-- The Jellyfin compatibility fix and a portable compose example.
+- The MediaTek DMA-BUF adapter, automatically configured for fresh Jellyfin store installs.
+- The Jellyfin compatibility fix and a portable software-mode compose example.
 - Installation, recovery, validation and licensing notes.
 
 The custom 3D enclosure is a separate personal build and is not included here. Firmware blobs, factory images, personal data, device credentials and configured root filesystems are not distributed.

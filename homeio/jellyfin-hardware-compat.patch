@@ -6,13 +6,15 @@
  
  import { execFile } from "node:child_process";
  import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
-@@ -999,7 +1000,8 @@
+@@ -999,7 +1000,10 @@
    webUiPort: number | null;
    storageMappingStrategy?: ComposeStorageMappingStrategy;
  }) {
 -  let composeContent = input.composeContent;
 +  const hardwareProfile = await readFile("/etc/homeio/hardware-profile", "utf8").catch(() => "");
-+  let composeContent = adaptComposeForHardwareProfile(input.appId, input.composeContent, hardwareProfile);
++  const mediatekVideo = (await readFile("/etc/homeio/mediatek-video-profile", "utf8").catch(() => "")).trim()
++    === "mediatek-ion-v4l2-h264-v1";
++  let composeContent = adaptComposeForHardwareProfile(input.appId, input.composeContent, hardwareProfile, mediatekVideo);
    if (input.webUiPort !== null) {
      composeContent = applyWebUiPortOverride(composeContent, input.webUiPort);
    }

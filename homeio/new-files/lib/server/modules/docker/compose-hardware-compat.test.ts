@@ -63,3 +63,27 @@ test("already adapted compose is stable and unknown images are left unchanged", 
   const unknown = catalog.replace("linuxserver/jellyfin:", "example/another-app:");
   assert.equal(adapt("jellyfin", unknown, "redmi-ruby-nas"), unknown);
 });
+
+test("MediaTek opt-in injects native encoder, permissions and first-run initialization", () => {
+  const document = yaml.load(adapt("jellyfin", catalog, "redmi-ruby-nas", true)) as { services: { jellyfin: Record<string, unknown> } };
+  const service = document.services.jellyfin;
+  assert.deepEqual(service.devices, ["/dev/video1:/dev/video1:rwm", "/dev/video2:/dev/video2:rwm", "/dev/ion:/dev/ion:rwm"]);
+  assert.deepEqual(service.environment, { FFMPEG_PATH: "/mediatek/ffmpeg", ATTACHED_DEVICES_PERMS: "/dev/video1 /dev/video2 /dev/ion" });
+  assert.equal(service.privileged, undefined);
+  assert.ok((service.volumes as unknown[]).some(entry => JSON.stringify(entry).includes("/custom-cont-init.d")));
+});
+
+test("MediaTek installs are idempotent and preserve custom environment values", () => {
+  const source = catalog.replace("    ports:", "    environment:\n      - TZ=Europe/Lisbon\n      - CUSTOM_VALUE=keep=this\n    ports:");
+  const fixed = adapt("jellyfin", source, "redmi-ruby-nas", true);
+  assert.equal(adapt("jellyfin", fixed, "redmi-ruby-nas", true), fixed);
+  const document = yaml.load(fixed) as { services: { jellyfin: { environment: Record<string, string> } } };
+  assert.equal(document.services.jellyfin.environment.CUSTOM_VALUE, "keep=this");
+  assert.equal(document.services.jellyfin.environment.TZ, "Europe/Lisbon");
+});
+
+test("MediaTek mode does not inject LinuxServer startup hooks into other images or apps", () => {
+  assert.equal(adapt("jellyfin-nvidia", catalog, "redmi-ruby-nas", true), catalog);
+  const source = "services:\n  jellyfin:\n    image: jellyfin/jellyfin:12.2\n";
+  assert.equal(adapt("jellyfin", source, "redmi-ruby-nas", true), source);
+});

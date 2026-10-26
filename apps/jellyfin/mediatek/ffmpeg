@@ -1,0 +1,3 @@
+#!/bin/sh
+export LD_PRELOAD="/mediatek/libmediatek-dmabuf.so${LD_PRELOAD:+:$LD_PRELOAD}"
+exec /usr/lib/jellyfin-ffmpeg/ffmpeg "$@"

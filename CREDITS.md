@@ -18,6 +18,7 @@
 | Homeio / doctor-io contributors | Web desktop, app store, file and server management | https://github.com/doctor-io/homeio |
 | Docker, Moby, containerd and runc contributors | Container engine and runtime | https://www.docker.com/ · https://github.com/moby/moby · https://containerd.io/ · https://github.com/opencontainers/runc |
 | PostgreSQL, nginx, Samba, Avahi and NetworkManager communities | Database, reverse proxy, file sharing and networking components | https://www.postgresql.org/ · https://nginx.org/ · https://www.samba.org/ · https://avahi.org/ · https://networkmanager.dev/ |
+| FFmpeg contributors | FFmpeg / Jellyfin FFmpeg, native V4L2 encoder and media processing | https://ffmpeg.org/ · https://github.com/jellyfin/jellyfin-ffmpeg |
 | Jellyfin contributors and LinuxServer.io | Media server and ARM64 container image used in the test | https://jellyfin.org/ · https://github.com/linuxserver/docker-jellyfin |
 | CasaOS AppStore contributors / IceWhale | App catalog consumed by Homeio; Jellyfin template adapted for this phone | https://github.com/IceWhaleTech/CasaOS-AppStore |
 | Android Open Source Project / LLVM | Boot image tooling and compiler infrastructure | https://android.googlesource.com/ · https://llvm.org/ |

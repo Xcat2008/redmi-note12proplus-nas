@@ -30,7 +30,9 @@ sudo bash scripts/install-nas.sh --install YOUR_LINUX_USER
 
 Replace `YOUR_LINUX_USER` with the Phosh desktop user you created. It requires the documented kernel, prepared `/userdata` and `/DATA` layout, Debian 13 base, internet access and an active Phosh user session. It refuses an existing Homeio installation rather than overwriting accounts. It does not unlock, flash or format the phone.
 
-The script installs prerequisites and the pinned Docker packages, applies the NAS display/power policy, builds pinned Homeio with both local patches, and enables its services. This new combined wrapper has preflight/syntax checks; a fresh end-to-end installation on a second phone is still pending. The original component steps and patched application builds were tested separately.
+The script installs prerequisites and the pinned Docker packages, applies the NAS display/power policy, compiles the MediaTek video adapter, builds pinned Homeio with both local patches, and enables its services. This new combined wrapper has preflight/syntax checks; a fresh end-to-end installation on a second phone is still pending. The original component steps and patched application builds were tested separately.
+
+Installing Jellyfin from the Homeio store then applies the MediaTek H.264 encoding profile automatically. The adapter is also precompiled into the clean image candidate. See [video support](MEDIATEK-VIDEO.md) for the precise limits.
 
 After completion, open `http://redmi-nas.local` from another computer on the same network. Create your Homeio account there. Read [validation](VALIDATION.md) before adding important data.
 

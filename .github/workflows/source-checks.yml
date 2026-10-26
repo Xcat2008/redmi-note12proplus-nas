@@ -18,4 +18,6 @@ jobs:
       - name: Installer offline checks
         run: python3 -m unittest discover -s image -v
       - name: Shell syntax
-        run: find scripts homeio/installer -name '*.sh' -print0 | xargs -0 -n1 bash -n
+        run: find scripts homeio/installer apps/jellyfin/mediatek -name '*.sh' -print0 | xargs -0 -n1 bash -n
+      - name: MediaTek adapter compiler checks
+        run: gcc -shared -fPIC -O2 -Wall -Wextra -Werror -o /tmp/libmediatek-dmabuf.so apps/jellyfin/mediatek/mediatek-dmabuf-bridge.c -ldl -pthread

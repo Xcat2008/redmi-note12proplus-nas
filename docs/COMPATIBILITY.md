@@ -17,7 +17,7 @@ Tested device: **Redmi Note 12 Pro+ 5G, 22101316UG / rubypro**, MediaTek MT6877 
 | Bluetooth | Not working/validated: bluebinder reports a missing /dev/rfkill |
 | SIM / modem / mobile data | Not validated |
 | Cameras | Not validated; not a goal of this NAS build |
-| Hardware video transcoding | Not validated; displaying the desktop with Mali does not establish Jellyfin transcoding support |
+| Hardware video encoding | H.264 MediaTek VPU confirmed in Jellyfin/FFmpeg through the ION/DMA-BUF adapter; software decoding and scaling |
 
 The planned hub is an ICY BOX IB-DK4034a-CPD with a USB-C PD charger and three SATA 2.5-inch disks. These are planned accessories, not certified compatible hardware. Power available to each USB port and mechanical-disk spin-up current must be checked in a physical test. A 3.5-inch HDD requires an enclosure/adapter with its own suitable power supply.
 

@@ -71,5 +71,19 @@
     "clean_second_device_install_verified": false,
     "clean_image_candidate_built": true,
     "physical_candidate_install_verified": false
+  },
+  "mediatek_video": {
+    "profile": "mediatek-ion-v4l2-h264-v1",
+    "source": "apps/jellyfin/mediatek/mediatek-dmabuf-bridge.c",
+    "source_sha256": "0e81f26e925081f5851f5ba2663a8772af7e4f57465faccb22b627a6fc50d900",
+    "jellyfin": "12.2.0",
+    "ffmpeg": "8.1.3-Jellyfin",
+    "container": "linuxserver/jellyfin:12.2ubu2604-ls53",
+    "hardware_h264_encoding_verified": true,
+    "hardware_decoding_verified": false,
+    "cpu_scaling": true,
+    "fresh_store_install_verified": true,
+    "empty_config_startup_verified": true,
+    "clean_image_includes_adapter": true
   }
 }

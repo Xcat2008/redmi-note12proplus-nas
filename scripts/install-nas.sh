@@ -73,5 +73,6 @@ apt-get install -y --no-remove --no-install-recommends \
 systemctl enable --now docker
 docker run --rm hello-world
 bash "$repo/scripts/install-phone-adaptations.sh" "$desktop_user"
+bash "$repo/scripts/install-mediatek-video.sh"
 bash "$repo/homeio/installer/install-homeio-native-phone.sh"
 echo 'NAS setup finished. Open http://redmi-nas.local and create your Homeio account.'

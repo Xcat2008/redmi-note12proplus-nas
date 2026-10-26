@@ -12,7 +12,7 @@ export class EnergyProfileError extends Error {
 }
 export function validateEnergyProfile(value: unknown): EnergyProfile {
   if (typeof value !== "string" || !ENERGY_PROFILES.includes(value as EnergyProfile)) {
-    throw new EnergyProfileError("Choose Power saver, Balanced or Performance. No validated overclock profile is available.");
+    throw new EnergyProfileError("Choose Power saver, Balanced or Performance.");
   }
   return value as EnergyProfile;
 }
@@ -94,7 +94,6 @@ export async function getEnergyStatus() {
     governorMatchesProfile: profile.available && clusters.length > 0 && clusters.every(cluster => cluster.governor === expectedGovernor),
     gpu: { model: facts.gpu?.model ?? "Integrated GPU", ...parseGpuTelemetry(opp, gpuState, gpuUsage), dvfs: "automatic" },
     memory: { ...parseMemoryInfo(mem), installedBytes: facts.installedMemoryBytes, dvfs: "automatic" },
-    overclock: { available: false, reason: "No operating points above the factory limits have been validated for this device/kernel. Diagnostic voltage controls are not exposed." },
   };
 }
 

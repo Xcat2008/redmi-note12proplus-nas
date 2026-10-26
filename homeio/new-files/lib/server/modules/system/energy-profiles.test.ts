@@ -4,7 +4,7 @@ import { parseGpuTelemetry, parseMemoryInfo, validateEnergyProfile } from "./ene
 
 test("only native factory-limit profiles can be selected", () => {
   for (const value of ["power-saver", "balanced", "performance"]) assert.equal(validateEnergyProfile(value), value);
-  for (const value of [null, 1, {}, "overclock", "performance;reboot"]) assert.throws(() => validateEnergyProfile(value));
+  for (const value of [null, 1, {}, "unsupported", "performance;reboot"]) assert.throws(() => validateEnergyProfile(value));
 });
 test("memory availability uses the kernel's available count", () => {
   const info = parseMemoryInfo("MemTotal: 8192 kB\nMemFree: 128 kB\nMemAvailable: 4096 kB\nSwapTotal: 2048 kB\nSwapFree: 1024 kB\n");

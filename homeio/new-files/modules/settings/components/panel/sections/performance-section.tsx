@@ -78,10 +78,6 @@ export function PerformanceSection() {
         <p>RAM: {gib(data.memory.installedBytes)} physical · {gib(data.memory.totalBytes)} available to Linux · {gib(data.memory.availableBytes)} currently available</p>
         <p className="text-muted-foreground">A clock reading can show the last active frequency while a core is idle. It does not measure power consumption.</p>
       </div>
-      <div className={cn(SETTINGS_PANEL_INSET, "p-4")}>
-        <div className="flex items-center justify-between gap-3"><h3 className="text-sm font-medium">Overclock</h3><button disabled className="rounded-lg border border-glass-border px-3 py-1 text-xs opacity-50">Not validated</button></div>
-        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{data.overclock.reason}</p>
-      </div>
     </>}
   </div>;
 }

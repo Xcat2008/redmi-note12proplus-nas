@@ -25,7 +25,7 @@ The native BlueZ panel passed six service tests. Browser checks verified radio p
 
 ## Energy and hardware scaling
 
-The native power manager now applies and persists the three CPU profiles, uses schedutil as its NAS balanced baseline and prevents screen-off dozing from overriding that policy. Native tests covered both clusters and profile persistence across power-daemon reactivation. Homeio's three controls, authentication, origin checks and rejection of an unvalidated overclock request passed browser tests. GPU frequency scaled from 385 to 950 MHz during an offscreen Mali GLES workload; a 512 MiB full-buffer copy/integrity probe reached the highest DDR operating point without a mismatch. Details and limits are in [ENERGY.md](ENERGY.md).
+The native power manager now applies and persists the three CPU profiles, uses schedutil as its NAS balanced baseline and prevents screen-off dozing from overriding that policy. Native tests covered both clusters and profile persistence across power-daemon reactivation. Homeio's three controls, authentication, origin checks and rejection of invalid profile identifiers passed browser tests. GPU frequency scaled from 385 to 950 MHz during an offscreen Mali GLES workload; a 512 MiB full-buffer copy/integrity probe reached the highest DDR operating point without a mismatch. Details and limits are in [ENERGY.md](ENERGY.md).
 
 ## Not yet established
 

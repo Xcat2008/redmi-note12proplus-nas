@@ -1,6 +1,6 @@
 # CPU profiles and hardware scaling
 
-Open **Settings → Performance** in Homeio. The profile controls the native Droidian power service and is saved on the NAS.
+Open **Settings â†’ Performance** in Homeio. The profile controls the native Droidian power service and is saved on the NAS.
 
 | Profile | CPU behavior |
 | --- | --- |
@@ -27,14 +27,14 @@ Tests on 26 October 2026 used factory operating points:
 - Both clusters reached 2.0 / 2.6 GHz during a CPU workload. A six-second integer microbenchmark pinned to CPUs 0 and 6 completed approximately four times as many work blocks after the governor correction. Application gains depend on the workload.
 - An offscreen OpenGL ES workload identified **ARM Mali-G68 MC4**, completed 276 frames in about eight seconds and reported no GL errors. GPU frequency rose from **385 to 950 MHz**, with observed load up to 96%.
 - An eight-thread memory-copy probe used **512 MiB** and checked every byte of both buffers afterward. It completed without a data mismatch; the DDR controller reached the highest factory operating point in its table. This is a bounded copy/integrity probe, not an exhaustive test of all physical RAM.
-- The highest observed CPU temperature across these short checks was approximately **70 °C**. Stock thermal control remained enabled. Sustained performance and power draw depend on load, cooling and charging conditions.
+- The highest observed CPU temperature across these short checks was approximately **70 Â°C**. Stock thermal control remained enabled. Sustained performance and power draw depend on load, cooling and charging conditions.
 - All three native profiles applied to both clusters. The selected profile survived a restart of the native power daemon. Browser tests checked selection, reported governors, authentication and origin protection. A full phone reboot with this update remains a separate validation step.
 
 The memory display distinguishes **8 GiB physical RAM**, roughly **7.4 GiB Linux-usable RAM** after platform reservations, and current available memory. ZRAM and filesystem cache are retained; they do not change the installed physical capacity.
 
-## Overclock status
+## Operating limits
 
-Homeio displays overclock as **Not validated**. Factory diagnostic frequency and voltage interfaces exist, but no above-stock CPU, GPU or memory operating point has been validated for this device/kernel. The web API exposes only the three factory-limit profiles and rejects an overclock request. Performance mode is a factory-limit CPU profile.
+The web interface exposes the three factory-limit CPU profiles. Frequency tables, voltage management and platform thermal controls remain unchanged.
 
 ## Source and checks
 

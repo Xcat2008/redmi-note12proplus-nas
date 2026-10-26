@@ -39,7 +39,7 @@ Confirmámos Linux nativo, Wi-Fi, Homeio, Docker ARM64, arranque automático e f
 
 ## Vídeo por hardware
 
-Os perfis de energia estão em **Settings → Performance**: Poupança, Equilibrado e Desempenho. O modo recomendado é **Equilibrado**, com frequência ajustada à carga. Foi corrigido o gestor que voltava a limitar o CPU; os testes confirmaram os limites de fábrica do processador, a subida automática da Mali e a resposta do controlador de memória. O overclock aparece como não validado e não permite alterar tensões. [Detalhes e medições](docs/ENERGY.md).
+Os perfis de energia estão em **Settings → Performance**: Poupança, Equilibrado e Desempenho. O modo recomendado é **Equilibrado**, com frequência ajustada à carga. Foi corrigido o gestor que voltava a limitar o CPU; os testes confirmaram os limites de fábrica do processador, a subida automática da Mali e a resposta do controlador de memória. Os perfis mantêm as frequências de fábrica e o controlo automático das tensões. [Detalhes e medições](docs/ENERGY.md).
 
 ![Percurso do vídeo no MediaTek](docs/assets/mediatek-video.svg)
 

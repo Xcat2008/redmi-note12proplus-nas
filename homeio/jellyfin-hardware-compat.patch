@@ -1,0 +1,18 @@
+--- a/lib/server/modules/docker/compose-runner.ts
++++ b/lib/server/modules/docker/compose-runner.ts
+@@ -1,4 +1,5 @@
+ import "server-only";
++import { adaptComposeForHardwareProfile } from "./compose-hardware-compat";
+ 
+ import { execFile } from "node:child_process";
+ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+@@ -999,7 +1000,8 @@
+   webUiPort: number | null;
+   storageMappingStrategy?: ComposeStorageMappingStrategy;
+ }) {
+-  let composeContent = input.composeContent;
++  const hardwareProfile = await readFile("/etc/homeio/hardware-profile", "utf8").catch(() => "");
++  let composeContent = adaptComposeForHardwareProfile(input.appId, input.composeContent, hardwareProfile);
+   if (input.webUiPort !== null) {
+     composeContent = applyWebUiPortOverride(composeContent, input.webUiPort);
+   }

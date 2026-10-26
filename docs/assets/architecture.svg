@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="330" viewBox="0 0 1120 330" role="img" aria-label="Phone running native Linux, Homeio and Docker, accessed from a browser over Wi-Fi">
+<rect width="1120" height="330" rx="24" fill="#101b28"/>
+<text x="44" y="48" font-family="sans-serif" font-size="18" fill="#81dccb">REDMI NOTE 12 PRO+ NAS</text>
+<rect x="44" y="78" width="265" height="192" rx="18" fill="#203444"/>
+<text x="68" y="112" font-family="sans-serif" font-size="22" fill="white">Redmi / Dimensity 1080</text>
+<text x="68" y="146" font-family="sans-serif" font-size="17" fill="#c5d4df">8 GiB RAM · 256 GB storage</text>
+<text x="68" y="184" font-family="sans-serif" font-size="19" fill="#81dccb">Droidian / Debian</text>
+<text x="68" y="214" font-family="sans-serif" font-size="16" fill="#c5d4df">Vendor kernel + Halium</text>
+<text x="68" y="244" font-family="sans-serif" font-size="16" fill="#c5d4df">Display off · NAS stays online</text>
+<path d="M319 174H382" stroke="#81dccb" stroke-width="3"/><path d="m372 166 11 8-11 8" stroke="#81dccb" fill="none" stroke-width="3"/>
+<rect x="393" y="78" width="290" height="192" rx="18" fill="#203444"/>
+<text x="419" y="118" font-family="sans-serif" font-size="24" fill="white">Homeio + Docker</text>
+<text x="419" y="154" font-family="sans-serif" font-size="17" fill="#c5d4df">Web desktop · ARM64 apps</text>
+<text x="419" y="190" font-family="sans-serif" font-size="17" fill="#c5d4df">Files · server management</text>
+<text x="419" y="226" font-family="sans-serif" font-size="17" fill="#81dccb">Automatic background startup</text>
+<path d="M693 174H756" stroke="#81dccb" stroke-width="3"/><path d="m746 166 11 8-11 8" stroke="#81dccb" fill="none" stroke-width="3"/>
+<rect x="767" y="78" width="309" height="192" rx="18" fill="#203444"/>
+<text x="793" y="118" font-family="sans-serif" font-size="24" fill="white">Browser on your LAN</text>
+<text x="793" y="160" font-family="sans-serif" font-size="17" fill="#c5d4df">Computer · tablet · phone</text>
+<text x="793" y="202" font-family="sans-serif" font-size="18" fill="#81dccb">Wi-Fi</text>
+<text x="793" y="238" font-family="sans-serif" font-size="16" fill="#c5d4df">External hub / disks: pending test</text>
+<text x="44" y="305" font-family="sans-serif" font-size="14" fill="#91a6b8">José Miranda · Independent community experiment · Source and porting notes</text></svg>

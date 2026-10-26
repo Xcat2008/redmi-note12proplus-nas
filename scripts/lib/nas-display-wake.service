@@ -1,0 +1,15 @@
+[Unit]
+Description=Redmi NAS physical power button wake compatibility
+After=phosh.service
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+EnvironmentFile=-/etc/default/redmi-nas
+ExecStart=/usr/bin/python3 /usr/local/libexec/nas-display-wake.py
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

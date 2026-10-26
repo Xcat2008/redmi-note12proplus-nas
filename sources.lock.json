@@ -1,0 +1,73 @@
+{
+  "device": {
+    "model": "22101316UG",
+    "name": "Redmi Note 12 Pro+ 5G",
+    "codename": "rubypro",
+    "soc": "MT6877 / Dimensity 1080",
+    "original_firmware": "OS2.0.16.0.UMOEUXM"
+  },
+  "kernel": {
+    "url": "https://github.com/MiCode/Xiaomi_Kernel_OpenSource.git",
+    "ref": "ruby-s-oss",
+    "commit": "914ba8403bb3a957ed37b99dcecdbafce9d16121",
+    "release": "4.19.191-g914ba8403bb3",
+    "config_sha256": "81b268f5240f8fd8dba57494ba7a86916fd622af7558b1d256f6954860dee2ad"
+  },
+  "mtk_modules": {
+    "url": "https://github.com/MiCode/MTK_kernel_modules.git",
+    "ref": "ruby-s-oss",
+    "commit": "d854c51c4cab4e54923aa3ac6d67d7348b01346b"
+  },
+  "wlan_modules": {
+    "url": "https://github.com/MiCode/MTK_kernel_modules.git",
+    "ref": "pissarro-r-oss",
+    "commit": "46b0236ab1116346fcdbaf46d4c70827e7899f12"
+  },
+  "halium_initramfs": {
+    "url": "https://github.com/droidian/initramfs-tools-halium.git",
+    "commit": "a1c2588d25a1f748190027bbc1b8994f290ff32d"
+  },
+  "clang": {
+    "revision": "r383902",
+    "version": "11.0.1",
+    "url": "https://android.googlesource.com/platform/prebuilts/clang/host/linux-x86/+archive/refs/heads/android12-release/clang-r383902.tar.gz"
+  },
+  "droidian": {
+    "release": "droidian/101.20261023",
+    "api": 32,
+    "arch": "arm64",
+    "assets": [
+      {
+        "name": "droidian-devtools-api32-arm64_20261022.zip",
+        "bytes": 148633734,
+        "sha256": "85a783be4e4cac07625a662a0304a3a55a7cf0e66f15621117329977effc7383",
+        "verified_against_release_digest": true
+      },
+      {
+        "name": "droidian-OFFICIAL-phosh-phone-rootfs-api32-arm64-101.20261023_20261022.zip",
+        "bytes": 1437967579,
+        "sha256": "1f3b916d563a63b8e4cff663c4296c6ccfc0fd26f6fc8b125ed7c5fc304f4fd4",
+        "verified_against_release_digest": true
+      }
+    ]
+  },
+  "tested_runtime": {
+    "homeio": "1.10.3",
+    "homeio_url": "https://github.com/doctor-io/homeio",
+    "node": "22.23.4",
+    "go": "1.27.3",
+    "postgresql": "17",
+    "docker": "29.9.2",
+    "systemd": "257.7"
+  },
+  "working_boot_reference": {
+    "sha256": "eff8014850415169da0ab26aa018153bdd02c7d3c8a3d3fa2fade1ed53e1edaf",
+    "distributed": false,
+    "note": "Historical device-specific build fingerprint only; not a downloadable release."
+  },
+  "public_release": {
+    "kind": "source-and-porting-notes",
+    "flashable_image": false,
+    "clean_second_device_install_verified": false
+  }
+}

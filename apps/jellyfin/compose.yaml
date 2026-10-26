@@ -1,0 +1,17 @@
+# Software video mode for the Redmi NAS. No Pi/NVIDIA/GPU device mappings.
+name: jellyfin
+services:
+  jellyfin:
+    image: linuxserver/jellyfin:12.2ubu2604-ls53
+    container_name: jellyfin
+    environment:
+      PUID: ${PUID:?Set PUID to your Linux media user id}
+      PGID: ${PGID:?Set PGID to your Linux media group id}
+      TZ: ${TZ:-Europe/Lisbon}
+    volumes:
+      - /DATA/AppData/jellyfin/config:/config
+      - /DATA/Media:/Media:ro
+    ports:
+      - "8097:8096"
+      - "7359:7359/udp"
+    restart: unless-stopped

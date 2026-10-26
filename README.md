@@ -1,10 +1,14 @@
+![Redmi NAS — José Miranda](docs/assets/banner.svg)
+
 # Redmi Note 12 Pro+ NAS
+
+🇵🇹 **Made in Portugal — a project by Portuguese developer José Miranda (Xcat2008).**
 
 **A retired phone, a native Linux system, and a home server you can manage from a browser.**
 
-Project by **José Miranda** · GitHub: [Xcat2008](https://github.com/Xcat2008)
+Project by **José Miranda (Xcat2008)** · GitHub: [Xcat2008](https://github.com/Xcat2008)
 
-[Português](README.pt-PT.md) · [Porting guide](docs/INSTALLATION.md) · [Tested hardware](docs/COMPATIBILITY.md) · [Credits](CREDITS.md) · [Donate](https://www.paypal.com/donate/?business=m112mira%40hotmail.com&currency_code=EUR)
+[Quick start](docs/QUICKSTART.md) · [Português](README.pt-PT.md) · [Porting guide](docs/INSTALLATION.md) · [Tested hardware](docs/COMPATIBILITY.md) · [Credits](CREDITS.md)
 
 ![System architecture](docs/assets/architecture.svg)
 
@@ -14,7 +18,7 @@ The phone keeps a normal Phosh desktop. Homeio runs in the background and starts
 
 ## Release status
 
-**Developer preview: source, configuration and porting notes. There is no public flashable image or one-click installer in this release.**
+**Developer preview. NAS setup has an automated entry point for an already booting native Droidian port. Replacing Android with Linux is still a manual porting stage; there is no public flashable image.**
 
 The original device has been tested, but the public procedure has not yet been repeated on a second clean phone. Some setup stages still need a porter familiar with Android boot images, Halium and Linux storage. Read the [installation guide](docs/INSTALLATION.md) before deciding to replicate it.
 
@@ -26,7 +30,7 @@ The original device has been tested, but the public procedure has not yet been r
 | Automatic NAS startup after reboot | Working |
 | NAS stays available with display off | Working after the mobile-power-saver fix |
 | Docker ARM64 container | Working |
-| Jellyfin | ARM64 container and web interface working after removing Raspberry Pi device mappings; media playback still to be tested |
+| Jellyfin | ARM64 container and web interface working with persistent Raspberry Pi device-mapping compatibility; media playback still to be tested |
 | Physical power and volume buttons | Working with the documented adaptations |
 | CPU / GPU / RAM reporting | ARM hardware reporting patch included |
 | USB hub, simultaneous charging and external disks | Not yet tested |
@@ -46,7 +50,7 @@ The custom 3D enclosure is a separate personal build and is not included here. F
 
 ## Start here
 
-1. Check the exact model and [compatibility matrix](docs/COMPATIBILITY.md).
+1. Read the [quick start](docs/QUICKSTART.md), then check the exact model and [compatibility matrix](docs/COMPATIBILITY.md).
 2. Read the [installation and recovery notes](docs/INSTALLATION.md).
 3. Use the [pinned source manifest](sources.lock.json) and build notes; do not flash an image intended for a different Redmi model.
 4. On an already working native Droidian installation, use the scripts in `scripts/` after reviewing them.
@@ -56,11 +60,10 @@ This is an independent community experiment, not an official Xiaomi, Droidian or
 
 ## Support the project
 
-If this work helps you reuse an old phone, you can [make a voluntary donation through PayPal](https://www.paypal.com/donate/?business=m112mira%40hotmail.com&currency_code=EUR). Donations support José Miranda's work on this project. They do not purchase support or imply an endorsement from the upstream projects. Please also consider supporting those projects directly; see [credits](CREDITS.md).
+Donation links are temporarily disabled while the author verifies the payment setup. No payment recipient is configured in this preview. Voluntary contributions will support José Miranda's work on this project. They do not purchase support or imply an endorsement from the upstream projects. Please also consider supporting those projects directly; see [credits](CREDITS.md).
 
 Contributions, reproducible bug reports and documentation improvements are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md) before posting logs.
 
 ## License
 
 Original project scripts and documentation are licensed under **AGPL-3.0-only**, except where an individual file states otherwise. Kernel configuration and kernel/module patches retain **GPL-2.0-only** compatibility and upstream notices. Homeio-derived code remains **AGPL-3.0-only**. See [LICENSE.md](LICENSE.md) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
-

@@ -1,0 +1,135 @@
+--- a/lib/server/modules/system/info-service.ts
++++ b/lib/server/modules/system/info-service.ts
+@@ -4,6 +4,7 @@
+ import type { ServerHardwareInfo } from "@/lib/shared/contracts/server-info";
+ import os from "node:os";
+ import si from "systeminformation";
++import { readArmSocHardware } from "./arm-soc-hardware";
+ 
+ const CACHE_TTL_MS = 5 * 60 * 1_000;
+ 
+@@ -30,7 +31,7 @@
+ }
+ 
+ async function collect(): Promise<ServerHardwareInfo> {
+-  const [cpuData, graphics, memLayout, osInfo, systemInfo, biosInfo, baseboardInfo, batteryData, networkIfaces] =
++  const [cpuData, graphics, memLayout, osInfo, systemInfo, biosInfo, baseboardInfo, batteryData, networkIfaces, armSoc] =
+     await Promise.all([
+       probe("server-info.cpu", () => si.cpu(), null),
+       probe("server-info.graphics", () => si.graphics(), { controllers: [], displays: [] }),
+@@ -41,7 +42,12 @@
+       probe("server-info.baseboard", () => si.baseboard(), null),
+       probe("server-info.battery", () => si.battery(), null),
+       probe("server-info.networkInterfaces", () => si.networkInterfaces(), []),
++      os.platform() === "linux" && ["arm", "arm64"].includes(os.arch())
++        ? probe("server-info.arm-soc", () => readArmSocHardware(), null) : Promise.resolve(null),
+     ]);
++
++  const installedBytes = armSoc?.installedMemoryBytes && armSoc.installedMemoryBytes >= os.totalmem()
++    ? armSoc.installedMemoryBytes : null;
+ 
+   return {
+     fetchedAt: new Date().toISOString(),
+@@ -74,19 +80,22 @@
+       version: toStr(baseboardInfo?.version),
+     },
+     cpu: {
+-      manufacturer: toStr(cpuData?.manufacturer),
+-      brand: toStr(cpuData?.brand),
+-      speedGhz: toNum(cpuData?.speed),
+-      maxSpeedGhz: toNum(cpuData?.speedMax),
+-      cores: typeof cpuData?.cores === "number" && cpuData.cores > 0 ? cpuData.cores : os.cpus().length,
+-      physicalCores: typeof cpuData?.physicalCores === "number" && cpuData.physicalCores > 0 ? cpuData.physicalCores : null,
++      manufacturer: armSoc?.cpu && /^Cortex-/i.test(cpuData?.manufacturer ?? "") ? "ARM" : toStr(cpuData?.manufacturer),
++      brand: armSoc?.cpu?.brand ?? toStr(cpuData?.brand),
++      speedGhz: armSoc?.cpu?.speedGhz ?? toNum(cpuData?.speed),
++      maxSpeedGhz: armSoc?.cpu?.maxSpeedGhz ?? toNum(cpuData?.speedMax),
++      cores: armSoc?.cpu?.cores ?? (typeof cpuData?.cores === "number" && cpuData.cores > 0 ? cpuData.cores : os.cpus().length),
++      physicalCores: armSoc?.cpu?.physicalCores ?? (typeof cpuData?.physicalCores === "number" && cpuData.physicalCores > 0 ? cpuData.physicalCores : null),
+       processors: typeof cpuData?.processors === "number" && cpuData.processors > 0 ? cpuData.processors : null,
+       socket: toStr(cpuData?.socket),
+-      governor: toStr(cpuData?.governor),
++      governor: armSoc?.cpu?.governor ?? toStr(cpuData?.governor),
+     },
+     memory: {
+       totalBytes: os.totalmem(),
+-      slots: memLayout.map((slot) => ({
++      installedBytes,
++      reservedBytes: installedBytes ? installedBytes - os.totalmem() : null,
++      onBoard: installedBytes !== null,
++      slots: installedBytes ? [{ bank: "On-board RAM", type: null, formFactor: "Soldered", sizeBytes: installedBytes, clockSpeedMhz: null, manufacturer: null }] : memLayout.map((slot) => ({
+         bank: toStr(slot.bank),
+         type: toStr(slot.type),
+         formFactor: toStr(slot.formFactor),
+@@ -96,7 +105,7 @@
+       })),
+     },
+     gpu: {
+-      controllers: graphics.controllers.map((ctrl) => ({
++      controllers: graphics.controllers.length === 0 && armSoc?.gpu ? [armSoc.gpu] : graphics.controllers.map((ctrl) => ({
+         vendor: toStr(ctrl.vendor),
+         model: toStr(ctrl.model),
+         bus: toStr(ctrl.bus),
+--- a/lib/shared/contracts/server-info.ts
++++ b/lib/shared/contracts/server-info.ts
+@@ -11,6 +11,7 @@
+ };
+ 
+ export type ServerGpuController = {
++  sharedMemory?: boolean;
+   vendor: string | null;
+   model: string | null;
+   bus: string | null;
+@@ -90,6 +91,9 @@
+   cpu: ServerCpuInfo;
+   memory: {
+     totalBytes: number;
++    installedBytes?: number | null;
++    reservedBytes?: number | null;
++    onBoard?: boolean;
+     slots: ServerMemorySlot[];
+   };
+   gpu: {
+--- a/modules/settings/components/panel/sections/server-info-section.tsx
++++ b/modules/settings/components/panel/sections/server-info-section.tsx
+@@ -10,9 +10,9 @@
+ 
+ function formatBytes(bytes: number | null): string {
+   if (bytes === null) return "—";
+-  if (bytes >= 1_073_741_824) return `${(bytes / 1_073_741_824).toFixed(1)} GB`;
+-  if (bytes >= 1_048_576) return `${(bytes / 1_048_576).toFixed(0)} MB`;
+-  if (bytes >= 1_024) return `${(bytes / 1_024).toFixed(0)} KB`;
++  if (bytes >= 1_073_741_824) return `${(bytes / 1_073_741_824).toFixed(1)} GiB`;
++  if (bytes >= 1_048_576) return `${(bytes / 1_048_576).toFixed(0)} MiB`;
++  if (bytes >= 1_024) return `${(bytes / 1_024).toFixed(0)} KiB`;
+   return `${bytes} B`;
+ }
+ 
+@@ -77,14 +77,16 @@
+   return (
+     <div>
+       <Rows>
+-        <Row label="Total" value={formatBytes(memory.totalBytes)} />
+-        {filledSlots.length > 0 && <Row label="Modules" value={`${filledSlots.length} installed`} />}
++        {memory.installedBytes && <Row label="Installed RAM" value={formatBytes(memory.installedBytes)} />}
++        <Row label={memory.installedBytes ? "Usable by Linux" : "Total"} value={formatBytes(memory.totalBytes)} />
++        {memory.reservedBytes != null && memory.reservedBytes > 0 && <Row label="Hardware / system reserved" value={formatBytes(memory.reservedBytes)} />}
++        {!memory.onBoard && filledSlots.length > 0 && <Row label="Modules" value={`${filledSlots.length} installed`} />}
+       </Rows>
+ 
+       {filledSlots.length > 0 && (
+         <>
+           <div className="border-t border-glass-border/40 px-4 pb-1 pt-3">
+-            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/50">Slots</span>
++            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/50">{memory.onBoard ? "On-board memory" : "Slots"}</span>
+           </div>
+           <div className="divide-y divide-glass-border/30 px-4">
+             {filledSlots.map((slot, i) => (
+@@ -120,6 +122,7 @@
+             <div className="mb-1 text-xs font-medium text-foreground">{name}</div>
+             <div className="flex flex-wrap gap-x-4 gap-y-0.5">
+               {ctrl.bus && <span className="text-[11px] text-muted-foreground/70">{ctrl.bus}</span>}
++              {ctrl.sharedMemory && <span className="text-[11px] text-muted-foreground/70">Shared system RAM</span>}
+               {ctrl.vramBytes && <span className="text-[11px] text-muted-foreground/70">VRAM {formatBytes(ctrl.vramBytes)}</span>}
+               {ctrl.subVendor && <span className="text-[11px] text-muted-foreground/70">{ctrl.subVendor}</span>}
+             </div>

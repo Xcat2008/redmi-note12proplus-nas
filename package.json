@@ -1,0 +1,13 @@
+{
+  "name": "redmi-note12proplus-nas-source-checks",
+  "version": "0.1.0",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "scripts": {
+    "test": "node --import tsx --test homeio/new-files/lib/server/modules/system/arm-soc-hardware.test.ts homeio/new-files/lib/server/modules/docker/compose-hardware-compat.test.ts"
+  },
+  "devDependencies": {
+    "js-yaml": "4.1.0",
+    "tsx": "4.20.6"
+  }
+}

@@ -1,0 +1,11 @@
+[Unit]
+Description=Redmi NAS demand-based CPU frequency policy
+After=lxc@android.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/libexec/nas-cpu-policy.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

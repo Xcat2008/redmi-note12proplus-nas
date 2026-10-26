@@ -1,0 +1,278 @@
+diff --git a/connectivity/wlan/core/gen4m/Makefile b/connectivity/wlan/core/gen4m/Makefile
+index a989cdc..ef94c3d 100644
+--- a/connectivity/wlan/core/gen4m/Makefile
++++ b/connectivity/wlan/core/gen4m/Makefile
+@@ -57,9 +57,7 @@ ifneq ($(CONFIG_MTK_EMI),)
+ ccflags-y += -DCONFIG_MTK_EMI=1
+ endif
+ 
+-ifneq ($(CONFIG_MEDIATEK_EMI),)
+-ccflags-y += -DCONFIG_MTK_EMI=1
+-endif
++# ruby exposes CONFIG_MEDIATEK_EMI directly; do not also define the legacy CONFIG_MTK_EMI.
+ 
+ ifeq ($(WLAN_CHIP_ID),)
+ WLAN_CHIP_ID=$(word 1, $(MTK_COMBO_CHIP))
+@@ -434,6 +432,8 @@ ifeq ($(CFG_SUPPORT_WIFI_SYSDVT), 1)
+ ccflags-y += -I$(src)/include/dvt
+ endif
+ ccflags-y += -I$(srctree)/drivers/misc/mediatek/base/power/include/
++ccflags-y += -I$(srctree)/drivers/devfreq
++ccflags-y += -I$(srctree)/drivers/devfreq
+ ccflags-y += -I$(srctree)/drivers/misc/mediatek/include/mt-plat/
+ ccflags-y += -I$(srctree)/drivers/misc/mediatek/performance/include/
+ ccflags-y += -I$(srctree)/drivers/misc/mediatek/emi/$(MTK_PLATFORM)
+diff --git a/connectivity/wlan/core/gen4m/chips/soc5_0/soc5_0.c b/connectivity/wlan/core/gen4m/chips/soc5_0/soc5_0.c
+index 08592ab..ac63e50 100644
+--- a/connectivity/wlan/core/gen4m/chips/soc5_0/soc5_0.c
++++ b/connectivity/wlan/core/gen4m/chips/soc5_0/soc5_0.c
+@@ -30,7 +30,7 @@
+ #define CFG_SUPPORT_VCODE_VDFS 1
+ 
+ #if (CFG_SUPPORT_VCODE_VDFS == 1)
+-#include <linux/pm_qos.h>
++#include <linux/soc/mediatek/mtk-pm-qos.h>
+ #endif /*#ifndef CFG_SUPPORT_VCODE_VDFS*/
+ 
+ /*******************************************************************************
+@@ -114,7 +114,7 @@ static uint8_t *soc5_0_apucCr4FwName[] = {
+ */
+ 
+ #if (CFG_SUPPORT_VCODE_VDFS == 1)
+-static struct pm_qos_request wifi_req;
++static struct mtk_pm_qos_request wifi_req;
+ #endif /*#if (CFG_SUPPORT_VCODE_VDFS == 1)*/
+ 
+ #if (CFG_SUPPORT_PRE_ON_PHY_ACTION == 1)
+@@ -597,12 +597,12 @@ void soc5_0_icapRiseVcoreClockRate(void)
+ 	/* Enable VCore to 0.725 */
+ 
+ 	/* init */
+-	if (!pm_qos_request_active(&wifi_req))
+-		pm_qos_add_request(&wifi_req, PM_QOS_VCORE_OPP,
+-						PM_QOS_VCORE_OPP_DEFAULT_VALUE);
++	if (!mtk_pm_qos_request_active(&wifi_req))
++		mtk_pm_qos_add_request(&wifi_req, MTK_PM_QOS_VCORE_OPP,
++						MTK_PM_QOS_VCORE_OPP_DEFAULT_VALUE);
+ 
+ 	/* update Vcore */
+-	pm_qos_update_request(&wifi_req, 0);
++	mtk_pm_qos_update_request(&wifi_req, 0);
+ 
+ 	DBGLOG(HAL, STATE, "icapRiseVcoreClockRate done\n");
+ #else
+@@ -631,13 +631,13 @@ void soc5_0_icapDownVcoreClockRate(void)
+ #if (CFG_SUPPORT_VCODE_VDFS == 1)
+ 
+ 	/*init*/
+-	if (!pm_qos_request_active(&wifi_req))
+-		pm_qos_add_request(&wifi_req, PM_QOS_VCORE_OPP,
+-						PM_QOS_VCORE_OPP_DEFAULT_VALUE);
++	if (!mtk_pm_qos_request_active(&wifi_req))
++		mtk_pm_qos_add_request(&wifi_req, MTK_PM_QOS_VCORE_OPP,
++						MTK_PM_QOS_VCORE_OPP_DEFAULT_VALUE);
+ 
+ 	/*restore to default Vcore*/
+-	pm_qos_update_request(&wifi_req,
+-		PM_QOS_VCORE_OPP_DEFAULT_VALUE);
++	mtk_pm_qos_update_request(&wifi_req,
++		MTK_PM_QOS_VCORE_OPP_DEFAULT_VALUE);
+ 
+ 	/*disable VCore to normal setting*/
+ 	DBGLOG(HAL, STATE, "icapDownVcoreClockRate done!\n");
+@@ -1735,7 +1735,7 @@ void wlanCoAntVFE28En(IN struct ADAPTER *prAdapter)
+ 
+ 	if (fgCoAnt) {
+ 		if (gCoAntVFE28En == FALSE) {
+-#if (KERNEL_VERSION(4, 15, 0) <= CFG80211_VERSION_CODE)
++#if (KERNEL_VERSION(4, 15, 0) <= CFG80211_VERSION_CODE) && !defined(CONFIG_MTK_COMBO_CHIP_CONSYS_6877) && !defined(CONFIG_MTK_COMBO_CHIP_CONSYS_6877)
+ 			regmap_write(g_regmap,
+ 				MT6359_LDO_VFE28_OP_EN_SET, 0x1 << 8);
+ 			regmap_write(g_regmap,
+@@ -1756,7 +1756,7 @@ void wlanCoAntVFE28En(IN struct ADAPTER *prAdapter)
+ void wlanCoAntVFE28Dis(void)
+ {
+ 	if (gCoAntVFE28En == TRUE) {
+-#if (KERNEL_VERSION(4, 15, 0) <= CFG80211_VERSION_CODE)
++#if (KERNEL_VERSION(4, 15, 0) <= CFG80211_VERSION_CODE) && !defined(CONFIG_MTK_COMBO_CHIP_CONSYS_6877) && !defined(CONFIG_MTK_COMBO_CHIP_CONSYS_6877)
+ 		regmap_write(g_regmap, MT6359_LDO_VFE28_OP_EN_CLR, 0x1 << 8);
+ 		regmap_write(g_regmap, MT6359_LDO_VFE28_OP_CFG_CLR, 0x1 << 8);
+ 		regmap_write(g_regmap, MT6359_LDO_VFE28_OP_CFG_CLR, 0x1 << 8);
+diff --git a/connectivity/wlan/core/gen4m/common/wlan_oid.c b/connectivity/wlan/core/gen4m/common/wlan_oid.c
+index 513329b..915ec43 100644
+--- a/connectivity/wlan/core/gen4m/common/wlan_oid.c
++++ b/connectivity/wlan/core/gen4m/common/wlan_oid.c
+@@ -69,6 +69,8 @@
+  *                    E X T E R N A L   R E F E R E N C E S
+  ******************************************************************************
+  */
++#include <linux/kmemleak.h>
++#include <linux/kmemleak.h>
+ #include "precomp.h"
+ #include "mgmt/rsn.h"
+ #include "debug.h"
+diff --git a/connectivity/wlan/core/gen4m/include/chips/fw_dl.h b/connectivity/wlan/core/gen4m/include/chips/fw_dl.h
+index 7aa705f..93cee54 100644
+--- a/connectivity/wlan/core/gen4m/include/chips/fw_dl.h
++++ b/connectivity/wlan/core/gen4m/include/chips/fw_dl.h
+@@ -411,7 +411,7 @@ void fwDlGetReleaseManifest(struct ADAPTER *prAdapter,
+ #endif
+ 
+ #if (CFG_SUPPORT_CONNINFRA == 1)
+-extern void conninfra_get_phy_addr(unsigned int *addr, unsigned int *size);
++extern void conninfra_get_phy_addr(phys_addr_t *addr, unsigned int *size);
+ #endif
+ 
+ #endif /* _FW_DL_H */
+diff --git a/connectivity/wlan/core/gen4m/os/linux/gl_cfg80211.c b/connectivity/wlan/core/gen4m/os/linux/gl_cfg80211.c
+index 14653af..d960285 100644
+--- a/connectivity/wlan/core/gen4m/os/linux/gl_cfg80211.c
++++ b/connectivity/wlan/core/gen4m/os/linux/gl_cfg80211.c
+@@ -74,6 +74,7 @@
+ #include "debug.h"
+ #include "wlan_lib.h"
+ #include "gl_wext.h"
++#include <linux/kmemleak.h>
+ #include "precomp.h"
+ #include <linux/can/netlink.h>
+ #include <net/netlink.h>
+diff --git a/connectivity/wlan/core/gen4m/os/linux/gl_init.c b/connectivity/wlan/core/gen4m/os/linux/gl_init.c
+index 559fec6..5838093 100644
+--- a/connectivity/wlan/core/gen4m/os/linux/gl_init.c
++++ b/connectivity/wlan/core/gen4m/os/linux/gl_init.c
+@@ -5380,7 +5380,7 @@ static int initWlan(void)
+ 
+ #if (CFG_SUPPORT_CONNINFRA == 1)
+ 	conninfra_get_phy_addr(
+-		(unsigned int *)&gConEmiPhyBaseFinal,
++		&gConEmiPhyBaseFinal,
+ 		(unsigned int *)&gConEmiSizeFinal);
+ #endif
+ 
+diff --git a/connectivity/wlan/core/gen4m/os/linux/gl_kal.c b/connectivity/wlan/core/gen4m/os/linux/gl_kal.c
+index 406f83f..4b1faee 100644
+--- a/connectivity/wlan/core/gen4m/os/linux/gl_kal.c
++++ b/connectivity/wlan/core/gen4m/os/linux/gl_kal.c
+@@ -8934,7 +8934,7 @@ uint32_t kalSetSuspendFlagToEMI(IN struct ADAPTER
+ 	if (!gConEmiPhyBase) {
+ #if (CFG_SUPPORT_CONNINFRA == 1)
+ 		conninfra_get_phy_addr(
+-			(unsigned int *)&gConEmiPhyBase,
++			&gConEmiPhyBase,
+ 			(unsigned int *)&gConEmiSize);
+ #endif
+ 
+diff --git a/connectivity/wlan/core/gen4m/os/linux/gl_wext_priv.c b/connectivity/wlan/core/gen4m/os/linux/gl_wext_priv.c
+index 766e96e..4dffddf 100644
+--- a/connectivity/wlan/core/gen4m/os/linux/gl_wext_priv.c
++++ b/connectivity/wlan/core/gen4m/os/linux/gl_wext_priv.c
+@@ -7760,7 +7760,7 @@ int priv_driver_set_chip_config(IN struct net_device *prNetDev,
+ #if (CFG_SUPPORT_CONNINFRA == 1)
+ 	struct conn_metlog_info rMetInfo;
+ 	int32_t i4MetRes = 0;
+-	uint32_t u4ConEmiPhyBase = 0;
++	phys_addr_t u4ConEmiPhyBase = 0;
+ 	uint32_t u4EmiMetOffset = 0;
+ #endif
+ 
+@@ -7849,8 +7849,8 @@ int priv_driver_set_chip_config(IN struct net_device *prNetDev,
+ 		if (kalStrnCmp(rChipConfigInfo.aucCmd, "Wf_MET 1", 8) == 0) {
+ 			conninfra_get_phy_addr(&u4ConEmiPhyBase, NULL);
+ 			u4EmiMetOffset = kalGetEmiMetOffset();
+-			DBGLOG(REQ, INFO, "Start MET log, u4ConEmiPhyBase:%d",
+-				u4ConEmiPhyBase);
++			DBGLOG(REQ, INFO, "Start MET log, u4ConEmiPhyBase:%llx",
++				(uint64_t)u4ConEmiPhyBase);
+ 			if (!u4ConEmiPhyBase) {
+ 				DBGLOG(INIT, ERROR,
+ 				       "conninfra_get_phy_addr error\n");
+diff --git a/connectivity/wlan/core/gen4m/os/linux/plat/mt6877/plat_priv.c b/connectivity/wlan/core/gen4m/os/linux/plat/mt6877/plat_priv.c
+index 90c6758..9b3d372 100644
+--- a/connectivity/wlan/core/gen4m/os/linux/plat/mt6877/plat_priv.c
++++ b/connectivity/wlan/core/gen4m/os/linux/plat/mt6877/plat_priv.c
+@@ -7,7 +7,9 @@
+ #include <cpu_ctrl.h>
+ #include <topo_ctrl.h>
+ 
+-#include <linux/pm_qos.h>
++#include "precomp.h"
++#include "precomp.h"
++#include <linux/soc/mediatek/mtk-pm-qos.h>
+ #include <helio-dvfsrc-opp-v6877.h>
+ 
+ #include "precomp.h"
+@@ -20,6 +22,12 @@
+ #define	DOMAIN_CONN		2
+ #endif /* CFG_MTK_ANDROID_EMI */
+ 
++extern int set_task_util_min(pid_t pid, unsigned int util_min);
++static int nas_set_task_util_min_pct(pid_t pid, unsigned int percent)
++{
++	return set_task_util_min(pid, percent * 1024U / 100U);
++}
++
+ #define MAX_CPU_FREQ (3 * 1024 * 1024) /* in kHZ */
+ #define MAX_CLUSTER_NUM  3
+ #define CPU_BIG_CORE (0xc0)
+@@ -64,10 +72,10 @@ int32_t kalBoostCpu(IN struct ADAPTER *prAdapter,
+ 		    IN uint32_t u4BoostCpuTh)
+ {
+ 	struct GLUE_INFO *prGlueInfo = NULL;
+-	struct ppm_limit_data freq_to_set[MAX_CLUSTER_NUM];
++	struct cpu_ctrl_data freq_to_set[MAX_CLUSTER_NUM];
+ 	int32_t i = 0, i4Freq = -1;
+ 
+-	static struct pm_qos_request wifi_qos_request;
++	static struct mtk_pm_qos_request wifi_qos_request;
+ 	static u_int8_t fgRequested = ENUM_CPU_BOOST_STATUS_INIT;
+ 
+ 	uint32_t u4ClusterNum = topo_ctrl_get_nr_clusters();
+@@ -93,19 +101,19 @@ int32_t kalBoostCpu(IN struct ADAPTER *prAdapter,
+ 				u4TarPerfLevel, u4BoostCpuTh);
+ 			fgRequested = ENUM_CPU_BOOST_STATUS_START;
+ 
+-			set_task_util_min_pct(prGlueInfo->u4TxThreadPid, 100);
+-			set_task_util_min_pct(prGlueInfo->u4RxThreadPid, 100);
+-			set_task_util_min_pct(prGlueInfo->u4HifThreadPid, 100);
++			nas_set_task_util_min_pct(prGlueInfo->u4TxThreadPid, 100);
++			nas_set_task_util_min_pct(prGlueInfo->u4RxThreadPid, 100);
++			nas_set_task_util_min_pct(prGlueInfo->u4HifThreadPid, 100);
+ 			kalSetRpsMap(prGlueInfo, CPU_BIG_CORE);
+ 			update_userlimit_cpu_freq(CPU_KIR_WIFI,
+ 				u4ClusterNum, freq_to_set);
+ 
+ 			KAL_ACQUIRE_MUTEX(prAdapter, MUTEX_BOOST_CPU);
+ 			pr_info("Max Dram Freq start\n");
+-			pm_qos_add_request(&wifi_qos_request,
+-					   PM_QOS_DDR_OPP,
++			mtk_pm_qos_add_request(&wifi_qos_request,
++					   MTK_PM_QOS_DDR_OPP,
+ 					   DDR_OPP_0);
+-			pm_qos_update_request(&wifi_qos_request, DDR_OPP_0);
++			mtk_pm_qos_update_request(&wifi_qos_request, DDR_OPP_0);
+ 			KAL_RELEASE_MUTEX(prAdapter, MUTEX_BOOST_CPU);
+ 		}
+ 	} else {
+@@ -114,17 +122,17 @@ int32_t kalBoostCpu(IN struct ADAPTER *prAdapter,
+ 				u4TarPerfLevel, u4BoostCpuTh);
+ 			fgRequested = ENUM_CPU_BOOST_STATUS_STOP;
+ 
+-			set_task_util_min_pct(prGlueInfo->u4TxThreadPid, 0);
+-			set_task_util_min_pct(prGlueInfo->u4RxThreadPid, 0);
+-			set_task_util_min_pct(prGlueInfo->u4HifThreadPid, 0);
++			nas_set_task_util_min_pct(prGlueInfo->u4TxThreadPid, 0);
++			nas_set_task_util_min_pct(prGlueInfo->u4RxThreadPid, 0);
++			nas_set_task_util_min_pct(prGlueInfo->u4HifThreadPid, 0);
+ 			kalSetRpsMap(prGlueInfo, CPU_SMALL_CORE);
+ 			update_userlimit_cpu_freq(CPU_KIR_WIFI,
+ 				u4ClusterNum, freq_to_set);
+ 
+ 			KAL_ACQUIRE_MUTEX(prAdapter, MUTEX_BOOST_CPU);
+ 			pr_info("Max Dram Freq end\n");
+-			pm_qos_update_request(&wifi_qos_request, DDR_OPP_UNREQ);
+-			pm_qos_remove_request(&wifi_qos_request);
++			mtk_pm_qos_update_request(&wifi_qos_request, DDR_OPP_UNREQ);
++			mtk_pm_qos_remove_request(&wifi_qos_request);
+ 			KAL_RELEASE_MUTEX(prAdapter, MUTEX_BOOST_CPU);
+ 		}
+ 	}

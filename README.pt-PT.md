@@ -31,7 +31,7 @@ O aparelho tem 8 GiB de RAM física; o Linux apresenta cerca de 7,4 GiB após as
 
 ## Melhorias recentes
 
-As afinações da Mali Vulkan, a distribuição da emulação pelos núcleos rápidos e a redução de imagens repetidas melhoraram bastante a PS2 na televisão, através do Moonlight. Ainda existem pequenas paragens e limites de temperatura. Ficou esta como a base atual do projeto, sem overclock. Publicámos o código e as [notas de desempenho e estabilidade](docs/PERFORMANCE.md); estas alterações ainda não constituem uma nova imagem limpa pronta a instalar.
+A atualização de código acrescenta apresentação Vulkan na Mali, distribuição da emulação pelos núcleos rápidos, redução de imagens repetidas e correções de estabilidade do kernel e do arranque. As [notas técnicas de desempenho e estabilidade](docs/PERFORMANCE.md) documentam as medições e os limites de temperatura, sem overclock. Estas alterações ainda não constituem uma nova imagem limpa pronta a instalar.
 
 ## Estado desta publicação
 

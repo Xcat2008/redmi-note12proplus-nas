@@ -39,7 +39,7 @@ The phone has 8 GiB of physical RAM. Linux reports about 7.4 GiB after platform 
 
 ## Latest development baseline
 
-Native Mali Vulkan presentation, CPU-tier placement and duplicate-frame pacing substantially improved PS2 play on the project phone through Moonlight. Short pauses and thermal limits remain; this is not a full-speed compatibility claim. The validated source adapters and kernel stability fixes are published with [measurements and integration limits](docs/PERFORMANCE.md). A refreshed clean image containing this baseline has not been released.
+The source update adds native Mali Vulkan presentation, CPU-tier placement, bounded duplicate-frame pacing and kernel/runtime stability fixes. [Technical measurements and integration limits](docs/PERFORMANCE.md) cover the current timing and thermal constraints. A refreshed clean image containing this baseline has not been released.
 
 ## Release status
 

@@ -4,7 +4,7 @@ The NAS setup installs the gaming stack in Homeio. Open **RetroArch** from the H
 
 The native renderer was tested with **Mali-G68 MC4 / OpenGL ES 3.2** in the application's virtual X11 display, with audio routed to that session. It shares the display container's network and IPC namespaces while retaining the phone's native graphics libraries. A scoped BGRA adapter fixes the X11 buffer byte order without replacing the phone's Wayland graphics libraries. A solid-red GPU output was verified against the X11 pixel value.
 
-The later development baseline adds [native Vulkan source adapters and PS2 tuning](native/README.md). PS2 play on the TV improved substantially on the project phone, with occasional short pauses remaining. This opt-in native path is not yet integrated into a freshly validated public image. See [performance notes](../../docs/PERFORMANCE.md).
+The later development baseline adds [native Vulkan source adapters and PS2 tuning](native/README.md). The adapters address rendering cost and frame pacing; occasional timing spikes remain. This opt-in native path is not yet integrated into a freshly validated public image. See [performance notes](../../docs/PERFORMANCE.md).
 
 Browser capture and Sunshine currently encode video in software. Jellyfin's MediaTek hardware-video integration does not automatically provide an encoder to Sunshine. The browser defaults to 1280×720 at 30 FPS. PS2/PS3 gameplay is not certified by installing this stack.
 

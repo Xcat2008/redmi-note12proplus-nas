@@ -1,6 +1,6 @@
 # Performance and stability baseline — 27 October 2026
 
-The project device now runs a native Mali Vulkan path for the experimental ARMSX2 core, accessed through Homeio and streamed to the TV with Sunshine/Moonlight. The owner reported a substantial improvement over the first PS2 tests and accepted this version as the current baseline. Occasional short audio/video pauses remain. This is a result for one tested workload, not a promise that every PS2 game runs at full speed.
+This update provides a native Mali Vulkan path for the experimental ARMSX2 core, accessed through Homeio and Sunshine/Moonlight. It covers process-scoped presentation, CPU placement, bounded frame pacing and kernel/runtime stability. Occasional timing spikes and thermal limits remain; this is technical integration work, not a game compatibility list.
 
 ## Changes retained
 
@@ -19,7 +19,7 @@ The adapters are in [apps/retroarch/native](../apps/retroarch/native/README.md).
 
 - A 1280×720 synthetic changing-colour presentation check passed all 299 checked frames. Mean presentation time was approximately **8.85 ms before and 4.56 ms after** host-cached readback. This is a presentation-stage measurement, not a game FPS score.
 - An isolated asynchronous-core test reduced display callbacks from **241 to 58** over approximately one second while preserving new frames. A stopped-frame producer returned within the bounded wait; the opt-out path was also tested.
-- Live PS2 windows after tuning produced approximately **47.7–48.0 thousand audio frames/s**, against a 48 kHz target. The owner confirmed fewer pauses on the TV. Scenes differed between observations, so the before/after figures are not a matched replay benchmark.
+- Live PS2 windows after tuning produced approximately **47.7–48.0 thousand audio frames/s**, against a 48 kHz target. Runtime observations used different loads, so these figures are not a matched comparative benchmark.
 - The EE placement, restoration on unload, narrower-mask handling and opt-out passed isolated-thread tests. The policy was then observed automatically after a full RetroArch reopen.
 - Two ordinary warm reboots completed without manual recovery after the ttyGS0 workaround, with NAS-service recovery in approximately 76–82 seconds. A battery-disconnected cold boot was not tested.
 - Native GLES/Vulkan probes and a 60-frame synthetic Jellyfin hardware decode → Mali resize → H.264 encode check passed after the kernel update. These tests do not certify every codec or core.
@@ -30,8 +30,8 @@ The TV stream used **1280×720 at 30 fps** with Sunshine software H.264 encoding
 
 Sustained PS2 emulation and software streaming heated the CPU sensor to approximately **76–77 °C**. The thermal governor reduced the allowed Cortex-A78 frequency to **1.9–2.15 GHz**, below its 2.6 GHz factory maximum. Battery readings during those observations were around 40 °C; they are a different sensor.
 
-Thermal protection, automatic voltage control and factory operating points were preserved. No overclock was applied. Cooling has not yet been compared under the same game scene. Better sustained cooling may restore frequency headroom, but the game-performance gain must be measured; frequency ratios are not FPS predictions.
+Thermal protection, automatic voltage control and factory operating points were preserved. No overclock was applied. Cooling has not yet been compared under a fixed workload. Better sustained cooling may restore frequency headroom, but the sustained-performance gain must be measured; frequency ratios are not FPS predictions.
 
-The accepted baseline retains occasional microstutters. Further tuning is deferred until the cooling setup can be evaluated. The source update does not turn the existing clean-image candidate into a newly validated release; independent clean installation and image integration remain pending.
+Current limitations include occasional timing spikes and sustained thermal throttling. The source update does not turn the existing clean-image candidate into a newly validated release; independent clean installation and image integration remain pending.
 
-No game files, BIOS, saves, game titles, gameplay captures, device credentials or raw session logs are part of these validation notes.
+The publication contains source code and synthetic tests. Game assets, console firmware, credentials and raw session logs are not included.

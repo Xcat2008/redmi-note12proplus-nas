@@ -19,5 +19,7 @@ jobs:
         run: python3 -m unittest discover -s image -v
       - name: Shell syntax
         run: find scripts homeio/installer apps/jellyfin/mediatek -name '*.sh' -print0 | xargs -0 -n1 bash -n
+      - name: Native adapter synthetic tests
+        run: sh apps/retroarch/native/tests/run.sh
       - name: MediaTek adapter compiler checks
         run: gcc -shared -fPIC -O2 -Wall -Wextra -Werror -o /tmp/libmediatek-dmabuf.so apps/jellyfin/mediatek/mediatek-dmabuf-bridge.c -ldl -pthread

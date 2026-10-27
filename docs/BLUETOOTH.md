@@ -15,7 +15,7 @@ The panel supports controllers that pair without typing a PIN. It does not provi
 
 ## Validation boundary
 
-The radio's registration, power and discovery were exercised on the project phone. Browser checks verified authenticated access, rejection of unauthenticated/cross-origin requests, power switching, discovery across section changes, explicit stop and the automatic 45-second stop. Automated service tests cover the pairing-agent restrictions, time limits and device lifecycle. Pairing a physical Xbox/PlayStation controller and verifying its buttons inside a game still require a physical test; these tests do not certify every controller or firmware version.
+The radio's registration, power and discovery were exercised on the project phone. Browser checks verified authenticated access, rejection of unauthenticated/cross-origin requests, power switching, discovery across section changes, explicit stop and the automatic 45-second stop. Automated service tests cover the pairing-agent restrictions, time limits and device lifecycle. A Bluetooth Xbox controller was subsequently paired on the project device and its menu/in-game input was confirmed after profile fixes. PlayStation controllers and every controller/firmware combination are not certified by that result. The latest source/runtime integration status is recorded in [performance notes](PERFORMANCE.md).
 
 BlueZ keeps bonds on the running NAS. Personal pairing keys, device lists, game libraries, playlists and save files are not included in the project source or clean image. Published captures must not show personal game libraries or their titles.
 

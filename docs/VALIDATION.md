@@ -21,7 +21,7 @@ The permanent Homeio materialization hook then passed six regression tests, ESLi
 
 ## Homeio Bluetooth controls
 
-The native BlueZ panel passed six service tests. Browser checks verified radio power on/off, discovery, stopping a search, automatic stop after 45 seconds and discovery continuing while switching Settings sections. Unauthenticated requests, cross-origin mutations and malformed device addresses were rejected. The Next.js production build and server TypeScript build passed. Physical controller pairing and button input remain untested.
+The native BlueZ panel passed six service tests. Browser checks verified radio power on/off, discovery, stopping a search, automatic stop after 45 seconds and discovery continuing while switching Settings sections. Unauthenticated requests, cross-origin mutations and malformed device addresses were rejected. The Next.js production build and server TypeScript build passed. Physical Xbox pairing and button input were subsequently confirmed on the project device.
 
 ## Energy and hardware scaling
 
@@ -32,5 +32,9 @@ The native power manager now applies and persists the three CPU profiles, uses s
 - Hub host-mode operation with simultaneous PD charging.
 - External Ethernet and three external disks, including drive spin-up power.
 - SMB throughput and sustained real file-transfer checks.
-- Physical Bluetooth pairing/controller input, SIM/mobile data and camera functionality.
+- SIM/mobile data and camera functionality.
 - A public image reproducibly installed on a second clean device.
+
+## 27 October stability and gaming update
+
+The later native Vulkan/PS2 work, ordinary reboot fixes, thermal observations and remaining microstutters are recorded in [PERFORMANCE.md](PERFORMANCE.md). Physical Xbox pairing and input have now been confirmed on the development device; independent clean-install validation remains pending.

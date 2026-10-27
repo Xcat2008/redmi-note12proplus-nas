@@ -37,6 +37,10 @@ The phone has 8 GiB of physical RAM. Linux reports about 7.4 GiB after platform 
 
 </details>
 
+## Latest development baseline
+
+Native Mali Vulkan presentation, CPU-tier placement and duplicate-frame pacing substantially improved PS2 play on the project phone through Moonlight. Short pauses and thermal limits remain; this is not a full-speed compatibility claim. The validated source adapters and kernel stability fixes are published with [measurements and integration limits](docs/PERFORMANCE.md). A refreshed clean image containing this baseline has not been released.
+
 ## Release status
 
 **Developer preview. The NAS runs on the project device. A clean boot/data image and a guarded Windows installer have also been built, but still need a complete physical installation test before a public binary release.**
@@ -56,7 +60,7 @@ The original device has been tested, but the public procedure has not yet been r
 | CPU / GPU / RAM reporting | ARM hardware reporting patch included |
 | CPU energy profiles | Homeio controls Power saver / Balanced / Performance; corrected native policy, factory limits and automatic GPU/memory DVFS |
 | USB hub, simultaneous charging and external disks | Not yet tested |
-| Bluetooth | Radio power and discovery verified from Homeio Settings; controller pairing controls included, physical pairing remains untested |
+| Bluetooth | Homeio radio/discovery controls verified; Xbox pairing and in-game input confirmed on the project device |
 | SIM / mobile data and cameras | Not validated |
 | Jellyfin video acceleration | H.264 / HEVC / VP9 SDR decoding, Mali resize and H.264 encoding verified |
 

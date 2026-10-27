@@ -29,13 +29,17 @@ O aparelho tem 8 GiB de RAM física; o Linux apresenta cerca de 7,4 GiB após as
 
 </details>
 
+## Melhorias recentes
+
+As afinações da Mali Vulkan, a distribuição da emulação pelos núcleos rápidos e a redução de imagens repetidas melhoraram bastante a PS2 na televisão, através do Moonlight. Ainda existem pequenas paragens e limites de temperatura. Ficou esta como a base atual do projeto, sem overclock. Publicámos o código e as [notas de desempenho e estabilidade](docs/PERFORMANCE.md); estas alterações ainda não constituem uma nova imagem limpa pronta a instalar.
+
 ## Estado desta publicação
 
 Esta é uma **prévia técnica com código-fonte, configurações e notas de instalação**. A NAS funciona no aparelho do projeto. Também foi construída uma imagem limpa de arranque e dados, com um instalador para Windows, mas falta testar essa instalação completa num aparelho limpo antes de disponibilizar os binários ao público. Consulta o [estado do instalador](docs/IMAGE-INSTALLER.md).
 
 O aparelho usado é o **Redmi Note 12 Pro+ 5G, modelo 22101316UG (rubypro)**, com Dimensity 1080, 8 GiB de RAM física e 256 GB de armazenamento. Não usar imagens do modelo 4G ou de outro telemóvel.
 
-Confirmámos Linux nativo, Wi-Fi, Homeio, Docker ARM64, arranque automático e funcionamento da NAS com o ecrã apagado. O Jellyfin reproduz no browser e converte 1080p para 720p usando descodificação MediaTek, redimensionamento Mali e codificação H.264 MediaTek. O Bluetooth pode ser gerido em **Settings → Bluetooth**, no Homeio: ligar/desligar, procurar, emparelhar, ligar, desligar e esquecer dispositivos. A pesquisa e os controlos do rádio foram testados no browser; falta testar o emparelhamento com um comando físico. [Como usar](docs/BLUETOOTH.md). Hub, carregamento simultâneo com USB e discos externos ainda não foram ensaiados; SIM e câmaras não estão validados.
+Confirmámos Linux nativo, Wi-Fi, Homeio, Docker ARM64, arranque automático e funcionamento da NAS com o ecrã apagado. O Jellyfin reproduz no browser e converte 1080p para 720p usando descodificação MediaTek, redimensionamento Mali e codificação H.264 MediaTek. O Bluetooth pode ser gerido em **Settings → Bluetooth**, no Homeio: ligar/desligar, procurar, emparelhar, ligar, desligar e esquecer dispositivos. A pesquisa e os controlos do rádio foram testados no browser; o emparelhamento e os botões de um comando Xbox também foram confirmados no aparelho do projeto. [Como usar](docs/BLUETOOTH.md). Hub, carregamento simultâneo com USB e discos externos ainda não foram ensaiados; SIM e câmaras não estão validados.
 
 ## Vídeo por hardware
 

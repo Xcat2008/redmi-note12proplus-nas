@@ -132,5 +132,26 @@
     "hdr_tone_mapping_tested": false,
     "kernel_pid_max": 65535,
     "runtime_hashes": "hardware/runtime-lock.json"
+  },
+  "native_gaming_development": {
+    "retroarch": "1.20.0",
+    "libretro_api_header": {
+      "url": "https://raw.githubusercontent.com/libretro/RetroArch/v1.20.0/libretro-common/include/libretro.h",
+      "sha256": "063e295dffaad157216507f58c20d7f5c64a572fc74888502520683d2a453e42"
+    },
+    "armsx2": {
+      "url": "https://github.com/ARMSX2/ARMSX2",
+      "observed_revision": "90126bdfea"
+    },
+    "malisx2": {
+      "url": "https://github.com/bmdhacks/malisx2",
+      "tag": "v0.2.3",
+      "commit": "b85d5f7f366994a403fcc14bc6a0813c3fde628f"
+    },
+    "mesa": {
+      "url": "https://github.com/bmdhacks/armsx2-turnip",
+      "commit": "2b9a7e936fd40969c650c26ed10f1a4078b8f246"
+    },
+    "clean_image_integration": "pending"
   }
 }

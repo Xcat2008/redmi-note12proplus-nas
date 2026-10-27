@@ -24,6 +24,8 @@
 | CasaOS AppStore contributors / IceWhale | App catalog consumed by Homeio; Jellyfin template adapted for this phone | https://github.com/IceWhaleTech/CasaOS-AppStore |
 | BlueZ and mer-hybris / bluebinder contributors | Bluetooth stack and original HIDL/VHCI bridge, adapted for this kernel | https://www.bluez.org/ · https://github.com/mer-hybris/bluebinder |
 | RetroArch and Libretro contributors | Multi-system frontend, emulator cores and controller profiles | https://www.retroarch.com/ · https://www.libretro.com/ |
+| ARMSX2 contributors | Experimental native ARM64 PS2 emulator used in the development tests | https://github.com/ARMSX2/ARMSX2 |
+| bmdhacks / MaliSX2 and Mesa contributors | Native Mali Vulkan driver path used by the scoped presentation bridge | https://github.com/bmdhacks/malisx2 · https://github.com/bmdhacks/armsx2-turnip |
 | LinuxServer.io and Selkies contributors | Container base and browser streaming session for the Homeio gaming stack | https://github.com/linuxserver/docker-retroarch · https://github.com/selkies-project/selkies |
 | LizardByte / Sunshine and Moonlight contributors | Game streaming server and compatible clients | https://github.com/LizardByte/Sunshine · https://moonlight-stream.org/ |
 | Android Open Source Project / LLVM | Boot image tooling and compiler infrastructure | https://android.googlesource.com/ · https://llvm.org/ |

@@ -20,7 +20,7 @@ function volumeTarget(entry: unknown): string | undefined {
   }
 }
 
-/** Opt-in device compatibility and MediaTek encoding for fresh catalog installs.
+/** Opt-in software video mode for this port, including fresh catalog installs.
  * Keep unrelated apps and hardware requirements intact. Never add privileges.
  */
 export function adaptComposeForHardwareProfile(

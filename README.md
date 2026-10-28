@@ -41,6 +41,8 @@ The phone has 8 GiB of physical RAM. Linux reports about 7.4 GiB after platform 
 
 The source update adds native Mali Vulkan presentation, CPU-tier placement, bounded duplicate-frame pacing and kernel/runtime stability fixes. [Technical measurements and integration limits](docs/PERFORMANCE.md) cover the current timing and thermal constraints. A refreshed clean image containing this baseline has not been released.
 
+The consolidated [native gaming profile](docs/NATIVE-GAMING.md) adds independent Steam launch, update/recovery handling and clean-image setup. Another unattended full NAS reboot passed on 28 October 2026. The candidate remains a developer validation build.
+
 ## Release status
 
 **Developer preview. The NAS runs on the project device. A clean boot/data image and a guarded Windows installer have also been built, but still need a complete physical installation test before a public binary release.**
@@ -59,6 +61,8 @@ The original device has been tested, but the public procedure has not yet been r
 | Physical power and volume buttons | Working with the documented adaptations |
 | CPU / GPU / RAM reporting | ARM hardware reporting patch included |
 | CPU energy profiles | Homeio controls Power saver / Balanced / Performance; corrected native policy, factory limits and automatic GPU/memory DVFS |
+| Steam Big Picture | Official native ARM64 client, separate Homeio/Moonlight entry and Mali composition; Steam games are not certified |
+| RetroArch PS2 adaptation | Native Mali backend and accepted presentation adapter; performance depends on software and temperature |
 | USB hub, simultaneous charging and external disks | Not yet tested |
 | Bluetooth | Homeio radio/discovery controls verified; Xbox pairing and in-game input confirmed on the project device |
 | SIM / mobile data and cameras | Not validated |

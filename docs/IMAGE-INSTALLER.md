@@ -13,14 +13,23 @@ A clean candidate has been assembled separately from the author’s working NAS.
 | Android sparse image structure and file digests | Checked offline |
 | MediaTek video adapter and automatic Jellyfin profile | Compiled into the clean candidate; full video chain tested on the running device |
 | RetroArch in Homeio, Ozone and native Mali rendering | Tested on the running device; included in the next candidate's setup |
-| Sunshine | Included in the gaming stack; TV/Moonlight streaming still needs validation |
-| Bluetooth controls in Homeio | First-setup source included; authenticated radio controls tested on the running NAS, physical pairing pending |
+| Sunshine | Shared streaming service with separate RetroArch and Steam launch entries; exercised through Moonlight on the project device |
+| Steam Big Picture | Official native ARM64 download on first setup, Mali composition, update restart and program recovery included |
+| Bluetooth controls in Homeio | First-setup source included; authenticated controls and Xbox pairing/navigation exercised on the project NAS |
 | CPU energy profiles | Corrected native power manager and Homeio controls included; factory CPU/GPU/memory scaling tested on the running device |
 | Per-installation Linux PIN and SSH key | Implemented; no shared default credentials |
 | Windows installer | Built; default operation only verifies the package |
 | Model, unlocked bootloader, slot and partition-layout checks | Implemented |
 | Clean physical install, Wi-Fi onboarding, first NAS setup | Pending |
 | Complete binary redistribution and corresponding-source audit | Pending before public binaries |
+
+The rc7 integration consolidates the current native gaming, mobile telemetry,
+optional memory/battery controls, Wi-Fi scan compatibility, quiet GPU logging
+and USB console reboot fix. Its Homeio overlay was built from a fresh v1.10.3
+checkout. The distribution Mali backend passed device creation, synthetic-frame
+presentation and window resizing on the actual GPU. The accepted emulator bridge
+is retained unchanged. See [the validation scope](NATIVE-GAMING.md); no live user
+installation is erased to produce or audit the candidate.
 
 The candidate includes `/usr/local/lib/redmi-nas/mediatek`, its source, startup profile and the Homeio installation hook. New installations receive the hardware video bridge, persistent Bluetooth adaptation and RetroArch profile automatically; no personal Jellyfin account, copied library, controller pairing or media file is included. The video bridge uses MediaTek decoding and encoding with Mali resizing for the tested SDR formats.
 

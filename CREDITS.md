@@ -28,6 +28,7 @@
 | bmdhacks / MaliSX2 and Mesa contributors | Native Mali Vulkan driver path used by the scoped presentation bridge | https://github.com/bmdhacks/malisx2 · https://github.com/bmdhacks/armsx2-turnip |
 | LinuxServer.io and Selkies contributors | Container base and browser streaming session for the Homeio gaming stack | https://github.com/linuxserver/docker-retroarch · https://github.com/selkies-project/selkies |
 | LizardByte / Sunshine and Moonlight contributors | Game streaming server and compatible clients | https://github.com/LizardByte/Sunshine · https://moonlight-stream.org/ |
+| Valve and ANGLE/Chromium contributors | Official ARM64 Steam client and browser graphics stack for Big Picture | https://store.steampowered.com/ · https://chromium.googlesource.com/angle/angle |
 | Android Open Source Project / LLVM | Boot image tooling and compiler infrastructure | https://android.googlesource.com/ · https://llvm.org/ |
 
 Thanks to the maintainers, documentation authors and people who report reproducible issues. None of these projects or companies has endorsed this experiment. Please retain upstream credits when reusing the adaptations, and consider supporting the upstream projects as well.

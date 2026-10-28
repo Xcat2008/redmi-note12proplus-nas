@@ -41,6 +41,8 @@ O aparelho usado é o **Redmi Note 12 Pro+ 5G, modelo 22101316UG (rubypro)**, co
 
 Confirmámos Linux nativo, Wi-Fi, Homeio, Docker ARM64, arranque automático e funcionamento da NAS com o ecrã apagado. O Jellyfin reproduz no browser e converte 1080p para 720p usando descodificação MediaTek, redimensionamento Mali e codificação H.264 MediaTek. O Bluetooth pode ser gerido em **Settings → Bluetooth**, no Homeio: ligar/desligar, procurar, emparelhar, ligar, desligar e esquecer dispositivos. A pesquisa e os controlos do rádio foram testados no browser; o emparelhamento e os botões de um comando Xbox também foram confirmados no aparelho do projeto. [Como usar](docs/BLUETOOTH.md). Hub, carregamento simultâneo com USB e discos externos ainda não foram ensaiados; SIM e câmaras não estão validados.
 
+A Steam usa o cliente ARM64 oficial e abre em Big Picture, com composição pela Mali e um atalho separado do RetroArch no Homeio e no Moonlight. As correções de arranque, atualização e recuperação fazem parte do perfil de instalação. O reinício completo da NAS voltou a passar em 28 de outubro de 2026. A compatibilidade de todos os jogos da Steam não está certificada. [Perfil nativo e validação](docs/NATIVE-GAMING.md).
+
 ## Vídeo por hardware
 
 Os perfis de energia estão em **Settings → Performance**: Poupança, Equilibrado e Desempenho. O modo recomendado é **Equilibrado**, com frequência ajustada à carga. Foi corrigido o gestor que voltava a limitar o CPU; os testes confirmaram os limites de fábrica do processador, a subida automática da Mali e a resposta do controlador de memória. Os perfis mantêm as frequências de fábrica e o controlo automático das tensões. [Detalhes e medições](docs/ENERGY.md).

@@ -1,0 +1,16 @@
+#!/bin/sh
+set -eu
+pid=0
+for attempt in $(seq 1 90); do
+ pid=$(docker inspect -f '{{.State.Pid}}' retroarch 2>/dev/null || printf 0)
+ if [ "$pid" -gt 1 ] && [ -S /DATA/AppData/custom-retroarch/config/.XDG/nas-pulse ] && docker exec retroarch test -S /tmp/.X11-unix/X1; then break;fi
+ sleep 1
+done
+test "$pid" -gt 1
+resolv=$(docker inspect -f '{{.ResolvConfPath}}' retroarch)
+test -s "$resolv"
+exec unshare --mount /bin/sh -c '
+ mount --make-rprivate /
+ mount --bind "$1" /etc/resolv.conf
+ exec nsenter -t "$2" -n -i runuser -u nas -- /DATA/AppData/custom-steam/bin/start-steam
+' sh "$resolv" "$pid"

@@ -1,7 +1,5 @@
-# SPDX-License-Identifier: AGPL-3.0-only
 """Bridge missing compositor wake events on this Redmi port, without grabbing keys."""
 import glob
-import pwd
 import logging
 import os
 import re
@@ -12,8 +10,8 @@ import sys
 import time
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
-USER = os.environ.get("NAS_DESKTOP_USER", "nas")
-UID = pwd.getpwnam(USER).pw_uid
+USER = "nas"
+UID = 32011
 DISPLAY_DEST = "org.gnome.Mutter.DisplayConfig"
 DISPLAY_PATH = "/org/gnome/Mutter/DisplayConfig"
 BRIGHTNESS = "/sys/class/leds/lcd-backlight/brightness"
@@ -70,7 +68,17 @@ def main():
     was_off = False
     # Cache power changes before key dispatch. A synchronous query after key-down
     # races Phosh's automatic unblank and incorrectly observes the already-lit state.
-    mode = screen_mode()
+    mode = None
+    waiting_logged = False
+    while mode is None:
+        try:
+            mode = screen_mode()
+        except (OSError, ValueError, subprocess.SubprocessError):
+            if not waiting_logged:
+                logging.info("Waiting for the desktop display service")
+                waiting_logged = True
+        if mode is None:
+            time.sleep(5)
     recently_unblanked = 0.0
     monitor = subprocess.Popen(
         ["runuser", "-u", USER, "--", "env", f"XDG_RUNTIME_DIR=/run/user/{UID}",

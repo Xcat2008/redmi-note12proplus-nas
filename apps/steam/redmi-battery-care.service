@@ -1,0 +1,13 @@
+[Unit]
+Description=Optional Xiaomi native battery charge window
+After=android_boot_completed.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/redmi-nas/battery-charge.py boot
+TimeoutStartSec=120
+RemainAfterExit=yes
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

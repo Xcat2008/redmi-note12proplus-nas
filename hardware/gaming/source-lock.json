@@ -1,0 +1,21 @@
+{
+  "malisx2": {
+    "repository": "https://github.com/bmdhacks/malisx2",
+    "revision": "b85d5f7f366994a403fcc14bc6a0813c3fde628f",
+    "mesaRevision": "2b9a7e936fd40969c650c26ed10f1a4078b8f246"
+  },
+  "armsx2": {
+    "repository": "https://github.com/ARMSX2/ARMSX2",
+    "revision": "90126bdfea",
+    "release": "nightly-20261023",
+    "sha256": "cb23704743b1f2d867b3486eb9e422aefacd61193fd55c072b03968851d0ff6b"
+  },
+  "steam": {
+    "origin": "https://client-update.fastly.steamstatic.com/",
+    "validatedClientVersion": "1792618285",
+    "binariesDistributed": false
+  },
+  "userMediaIncluded": false,
+  "automaticPersonalBackupsDefault": false,
+  "physicalCleanInstallValidated": false
+}

@@ -1,0 +1,15 @@
+[Unit]
+Description=Local application launcher for Sunshine
+After=docker.service redmi-retroarch-homeio.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/lib/redmi-nas/steam/gaming-launch-broker.py
+Restart=on-failure
+RestartSec=3
+UMask=0077
+MemoryMax=128M
+TasksMax=32
+
+[Install]
+WantedBy=multi-user.target

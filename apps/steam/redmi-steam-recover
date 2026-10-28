@@ -1,0 +1,7 @@
+#!/bin/sh
+set -eu
+[ "$(id -u)" = 0 ] || exit 1
+systemctl stop redmi-steam-trial.service
+runuser -u nas -- /usr/local/lib/redmi-nas/steam/steam-recovery.py restore
+systemctl reset-failed redmi-steam-trial.service 2>/dev/null || true
+systemctl start redmi-steam-trial.service

@@ -1,0 +1,37 @@
+#!/bin/sh
+set -eu
+root=/DATA/AppData/custom-steam
+export HOME="$root/native-arm64/home"
+export XDG_CONFIG_HOME="$HOME/.config"
+export XDG_DATA_HOME="$HOME/.local/share"
+export XDG_CACHE_HOME="$HOME/.cache"
+export XDG_RUNTIME_DIR="$root/runtime"
+export DISPLAY=:1
+export SDL_VIDEODRIVER=x11
+export GDK_BACKEND=x11
+export XDG_SESSION_TYPE=x11
+export PULSE_SERVER=unix:/DATA/AppData/custom-retroarch/config/.XDG/nas-pulse
+export DBUS_SESSION_BUS_ADDRESS=unix:/run/redmi-gaming/no-phone-bus
+export DBUS_FATAL_WARNINGS=0
+export STEAM_RUNTIME=0
+export STEAM_RUNTIME_LOGGER=0
+export LD_LIBRARY_PATH=/usr/local/lib/redmi-nas/steam/vulkan:$HOME/.local/share/Steam/steamrtarm64
+export NAS_VK_NATIVE_DRIVER=/usr/local/lib/redmi-nas/steam/vulkan/libvulkan_malisx2.so
+export HYBRIS_EGLPLATFORM=x11
+export EGL_PLATFORM=x11
+export WAYLAND_DISPLAY=redmi-nas-no-wayland
+mkdir -p "$XDG_CONFIG_HOME" "$XDG_CACHE_HOME" "$XDG_RUNTIME_DIR"
+cd "$HOME/.local/share/Steam"
+/usr/bin/python3 /usr/local/lib/redmi-nas/steam/repair-program-modes.py
+helper=steamrtarm64/steamwebhelper.sh
+profile=/usr/local/lib/redmi-nas/steam/steam-webhelper-gpu.sh
+if ! cmp -s "$profile" "$helper"; then
+    install -m755 "$profile" "$helper.new"
+    mv -f "$helper.new" "$helper"
+fi
+# The client was installed from verified archives. Skip its first-install
+# bootstrap, but permit client updates. Exit 42 is handled by the service.
+# The trusted graphics wrapper is reapplied above after every update/relaunch.
+exec ./steamrtarm64/steam -skipinitialbootstrap \
+    -noverifyfiles -norepairfiles -cef-force-gpu \
+    -cef-force-opaque-backgrounds -system-composer -gamepadui "$@"

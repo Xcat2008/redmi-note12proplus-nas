@@ -22,6 +22,8 @@ export function PerformanceSection() {
   const [data, setData] = useState<Status | null>(null);
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
+  const [memoryPending, setMemoryPending] = useState(false);
+  const [batteryPending, setBatteryPending] = useState(false);
   const mounted = useRef(true);
   const generation = useRef(0);
   const refresh = useCallback(async () => {
@@ -47,6 +49,26 @@ export function PerformanceSection() {
       if (mounted.current) setData(result.data);
     } catch (cause) { if (mounted.current) setError(cause instanceof Error ? cause.message : "The profile could not be applied."); }
     finally { generation.current++; if (mounted.current) setPending(false); }
+  }
+  async function toggleMemory(enabled: boolean) {
+    generation.current++; setPending(true); setMemoryPending(true); setError("");
+    try {
+      const response = await fetch("/api/v1/performance", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ memoryExtension: enabled }) });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "The memory extension could not be changed.");
+      if (mounted.current) setData(result.data);
+    } catch (cause) { if (mounted.current) setError(cause instanceof Error ? cause.message : "The memory extension could not be changed."); }
+    finally { generation.current++; if (mounted.current) { setPending(false); setMemoryPending(false); } void refresh(); }
+  }
+  async function toggleBattery(enabled: boolean) {
+    generation.current++; setPending(true); setBatteryPending(true); setError("");
+    try {
+      const response = await fetch("/api/v1/performance", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ batteryCare: enabled }) });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Battery care could not be changed.");
+      if (mounted.current) setData(result.data);
+    } catch (cause) { if (mounted.current) setError(cause instanceof Error ? cause.message : "Battery care could not be changed."); }
+    finally { generation.current++; if (mounted.current) { setPending(false); setBatteryPending(false); } void refresh(); }
   }
   return <div className="space-y-4" data-testid="nas-performance-panel">
     <p className="text-xs leading-relaxed text-muted-foreground">Choose how the CPU responds to work. The NAS stays available with the display off. Your choice is saved across restarts.</p>
@@ -77,6 +99,40 @@ export function PerformanceSection() {
         <p className="text-muted-foreground">GPU factory range: {data.gpu.minMhz ?? "—"}–{data.gpu.maxMhz ?? "—"} MHz. MediaTek GPU and memory DVFS remain automatic in all CPU profiles.</p>
         <p>RAM: {gib(data.memory.installedBytes)} physical · {gib(data.memory.totalBytes)} available to Linux · {gib(data.memory.availableBytes)} currently available</p>
         <p className="text-muted-foreground">A clock reading can show the last active frequency while a core is idle. It does not measure power consumption.</p>
+      </div>
+      <div className={cn(SETTINGS_PANEL_INSET, "space-y-3 p-4 text-xs")}>
+        <h3 className="text-sm font-medium">Battery care</h3>
+        <div className="flex items-center justify-between gap-3">
+          <div><p className="font-medium">Native charge window · {data.batteryCharge.lowerPercent}–{data.batteryCharge.upperPercent}%</p>
+            <p className="mt-1 text-muted-foreground">{data.batteryCharge.capacityPercent ?? "—"}% · {data.batteryCharge.chargingStatus ?? "Unknown"} · {data.batteryCharge.temperatureC ?? "—"} °C</p></div>
+          <button role="switch" aria-label="Battery care" aria-checked={data.batteryCharge.enabled}
+            disabled={pending || !data.batteryCharge.supported} onClick={() => void toggleBattery(!data.batteryCharge.enabled)}
+            className="rounded-lg border border-glass-border px-3 py-2 font-medium disabled:opacity-50">
+            {batteryPending ? "Applying…" : data.batteryCharge.enabled ? "Turn off" : "Turn on"}
+          </button>
+        </div>
+        {!data.batteryCharge.supported && <p role="status">The native charge control is unavailable on this device.</p>}
+        {data.batteryCharge.enabled && !data.batteryCharge.active && <p role="alert">The saved charge window is not active. Turn it off and on to retry.</p>}
+        <p className="text-muted-foreground">Optional, off by default. Xiaomi's controller pauses charging at 80% and permits charging again at 75%. The setting is saved across restarts. Temperature and charging safety limits remain managed by the controller.</p>
+        <p className="text-muted-foreground">This mode controls charging, not USB power. It does not force discharge or guarantee battery bypass. Hub charging compatibility must be tested with your hardware.</p>
+      </div>
+      <div className={cn(SETTINGS_PANEL_INSET, "space-y-3 p-4 text-xs")}>
+        <h3 className="text-sm font-medium">Memory extension</h3>
+        <p>ZRAM: {gib(data.memoryExtension.zramTotalBytes)} compressed swap capacity · {gib(data.memoryExtension.zramUsedBytes)} in use</p>
+        <p className="text-muted-foreground">ZRAM uses compressed RAM and stays managed by the system.</p>
+        <div className="flex items-center justify-between gap-3">
+          <div><p className="font-medium">Storage reserve · {gib(data.memoryExtension.sizeBytes)}</p>
+            <p className="mt-1 text-muted-foreground">{data.memoryExtension.active ? `${gib(data.memoryExtension.usedBytes)} in use` : "Off"} · {gib(data.memoryExtension.availableStorageBytes)} storage free</p></div>
+          <button role="switch" aria-label="Storage memory extension" aria-checked={data.memoryExtension.enabled}
+            disabled={pending} onClick={() => void toggleMemory(!data.memoryExtension.enabled)}
+            className="rounded-lg border border-glass-border px-3 py-2 font-medium disabled:opacity-50">
+            {memoryPending ? "Applying…" : data.memoryExtension.enabled ? "Turn off" : "Turn on"}
+          </button>
+        </div>
+        {memoryPending && <p role="status">Preparing memory. This can take a few minutes.</p>}
+        {data.memoryExtension.enabled && !data.memoryExtension.active && <p role="alert">Storage extension is enabled but could not start. Turn it off and on to retry.</p>}
+        <p className="text-muted-foreground">Optional, off by default. Uses internal storage after ZRAM and is slower than RAM. The choice is saved across restarts; turning it off frees the reserved storage. Close memory-heavy applications first.</p>
+        <p className="text-muted-foreground">{data.memoryExtension.kvmAvailable ? "KVM device detected. Guest compatibility still needs checking." : "KVM hardware virtualisation is unavailable in the current kernel. Extra swap does not enable it."}</p>
       </div>
     </>}
   </div>;

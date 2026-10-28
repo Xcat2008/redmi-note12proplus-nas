@@ -83,4 +83,5 @@ bash "$repo/scripts/install-hardware-services.sh"
 bash "$repo/scripts/install-retroarch.sh" --install "$desktop_user"
 bash "$repo/homeio/installer/install-homeio-native-phone.sh"
 bash "$repo/scripts/install-homeio-gaming.sh"
+bash "$repo/scripts/install-native-gaming.sh"
 echo 'NAS setup finished. Open http://redmi-nas.local and create your Homeio account.'

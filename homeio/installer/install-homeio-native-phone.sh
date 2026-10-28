@@ -38,21 +38,15 @@ test ! -e "${INSTALL_DIR}"
 git clone --depth=1 --branch "${REPO_BRANCH}" "${REPO_URL}" "${INSTALL_DIR}"
 project_root=$(cd "$(dirname "$(readlink -f "$0")")/../.." && pwd)
 cp -a "$project_root/homeio/new-files/." "$INSTALL_DIR/"
-git -C "$INSTALL_DIR" apply --check "$project_root/homeio/arm-hardware-reporting.patch"
-git -C "$INSTALL_DIR" apply "$project_root/homeio/arm-hardware-reporting.patch"
-git -C "$INSTALL_DIR" apply --check "$project_root/homeio/jellyfin-hardware-compat.patch"
-git -C "$INSTALL_DIR" apply "$project_root/homeio/jellyfin-hardware-compat.patch"
-git -C "$INSTALL_DIR" apply --check "$project_root/homeio/bluetooth-settings.patch"
-git -C "$INSTALL_DIR" apply "$project_root/homeio/bluetooth-settings.patch"
-git -C "$INSTALL_DIR" apply --check "$project_root/homeio/energy-profiles.patch"
-git -C "$INSTALL_DIR" apply "$project_root/homeio/energy-profiles.patch"
+git -C "$INSTALL_DIR" apply --check "$project_root/homeio/runtime-profile.patch"
+git -C "$INSTALL_DIR" apply "$project_root/homeio/runtime-profile.patch"
 python3 - "$INSTALL_DIR" <<'PY'
 from pathlib import Path
 import json, sys
 base=Path(sys.argv[1])
 p=base/'next.config.mjs';s=p.read_text(encoding='utf-8')
 assert 'experimental: {' in s
-s=s.replace('experimental: {','experimental: {\n    cpus: 2,',1)
+if 'cpus: 2' not in s:s=s.replace('experimental: {','experimental: {\n    cpus: 2,',1)
 p.write_text(s)
 p=base/'package.json';data=json.loads(p.read_text(encoding='utf-8'))
 data['scripts']['build']='next build --webpack && npm run build:server'

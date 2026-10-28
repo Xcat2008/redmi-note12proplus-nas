@@ -17,8 +17,10 @@ jobs:
       - run: npm test
       - name: Installer offline checks
         run: python3 -m unittest discover -s image -v
+      - name: Native Steam bootstrap safety checks
+        run: python3 -m unittest discover -s apps/steam -p 'test*.py' -v
       - name: Shell syntax
-        run: find scripts homeio/installer apps/jellyfin/mediatek -name '*.sh' -print0 | xargs -0 -n1 bash -n
+        run: find scripts homeio/installer apps/jellyfin/mediatek apps/steam hardware/gaming -name '*.sh' -print0 | xargs -0 -n1 bash -n
       - name: Native adapter synthetic tests
         run: sh apps/retroarch/native/tests/run.sh
       - name: MediaTek adapter compiler checks

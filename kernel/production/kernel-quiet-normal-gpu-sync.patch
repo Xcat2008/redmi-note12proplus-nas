@@ -1,0 +1,31 @@
+--- a/drivers/staging/android/mtk_ion/ion.c
++++ b/drivers/staging/android/mtk_ion/ion.c
+@@ -1816,7 +1816,7 @@
+ 
+ 	if (ion_iommu_heap_type(buffer) ||
+ 	    buffer->heap->type == (int)ION_HEAP_TYPE_SYSTEM) {
+-		IONMSG("%s iommu device, to cache sync\n", __func__);
++		pr_debug("[ION]%s iommu device, to cache sync\n", __func__);
+ 
+ 		mutex_lock(&buffer->lock);
+ 		list_for_each_entry(a, &buffer->attachments, list) {
+@@ -1839,7 +1839,7 @@
+ 
+ 	if (ion_iommu_heap_type(buffer) ||
+ 	    buffer->heap->type == (int)ION_HEAP_TYPE_SYSTEM) {
+-		IONMSG("%s iommu device, to cache sync\n", __func__);
++		pr_debug("[ION]%s iommu device, to cache sync\n", __func__);
+ 
+ 		mutex_lock(&buffer->lock);
+ 		list_for_each_entry(a, &buffer->attachments, list) {
+--- a/drivers/misc/mediatek/dbgtop/dbgtop.c
++++ b/drivers/misc/mediatek/dbgtop/dbgtop.c
+@@ -376,7 +376,7 @@
+ 	tmp |= value | MTK_DBGTOP_LATCH_CTL2_KEY;
+ 	mt_reg_sync_writel(tmp, MTK_DBGTOP_LATCH_CTL2);
+ 
+-	pr_info("%s: MTK_DBGTOP_LATCH_CTL2(0x%x)\n", __func__,
++	pr_debug("%s: MTK_DBGTOP_LATCH_CTL2(0x%x)\n", __func__,
+ 		readl(IOMEM(MTK_DBGTOP_LATCH_CTL2)));
+ 
+ 	return 0;

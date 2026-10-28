@@ -1,0 +1,12 @@
+[Unit]
+Description=Native RetroArch application
+After=redmi-retroarch-homeio.service
+Requires=redmi-retroarch-homeio.service
+
+[Service]
+Type=simple
+ExecStart=/usr/local/lib/redmi-nas/retroarch/homeio-session.py --renderer-only
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=20
+KillMode=mixed

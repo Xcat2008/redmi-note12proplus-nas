@@ -1,0 +1,5108 @@
+diff --git a/lib/server/modules/docker/compose-runner.ts b/lib/server/modules/docker/compose-runner.ts
+index 1ae273e..05c5cbf 100644
+--- a/lib/server/modules/docker/compose-runner.ts
++++ b/lib/server/modules/docker/compose-runner.ts
+@@ -1,4 +1,5 @@
+ import "server-only";
++import { adaptComposeForHardwareProfile } from "./compose-hardware-compat";
+ 
+ import { execFile } from "node:child_process";
+ import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
+@@ -999,7 +1000,10 @@ export async function materializeInlineStackFiles(input: {
+   webUiPort: number | null;
+   storageMappingStrategy?: ComposeStorageMappingStrategy;
+ }) {
+-  let composeContent = input.composeContent;
++  const hardwareProfile = await readFile("/etc/homeio/hardware-profile", "utf8").catch(() => "");
++  const mediatekVideo = (await readFile("/etc/homeio/mediatek-video-profile", "utf8").catch(() => "")).trim()
++    === "mediatek-ion-v4l2-h264-v1";
++  let composeContent = adaptComposeForHardwareProfile(input.appId, input.composeContent, hardwareProfile, mediatekVideo);
+   if (input.webUiPort !== null) {
+     composeContent = applyWebUiPortOverride(composeContent, input.webUiPort);
+   }
+diff --git a/lib/server/modules/system/info-service.ts b/lib/server/modules/system/info-service.ts
+index fe93d0f..35a2cba 100644
+--- a/lib/server/modules/system/info-service.ts
++++ b/lib/server/modules/system/info-service.ts
+@@ -1,143 +1,154 @@
+-import "server-only";
+-
+-import { logServerAction } from "@/lib/server/logging/logger";
+-import type { ServerHardwareInfo } from "@/lib/shared/contracts/server-info";
+-import os from "node:os";
+-import si from "systeminformation";
+-
+-const CACHE_TTL_MS = 5 * 60 * 1_000;
+-
+-let cache: { value: ServerHardwareInfo; expiresAt: number } | null = null;
+-
+-function toStr(value: unknown): string | null {
+-  if (typeof value !== "string") return null;
+-  const s = value.trim();
+-  return s.length > 0 && s !== "Default string" && s !== "To Be Filled By O.A.M.E." ? s : null;
+-}
+-
+-function toNum(value: unknown): number | null {
+-  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return null;
+-  return value;
+-}
+-
+-async function probe<T>(action: string, fn: () => Promise<T>, fallback: T): Promise<T> {
+-  try {
+-    return await fn();
+-  } catch (error) {
+-    logServerAction({ level: "warn", layer: "service", action, status: "error", error, message: "probe failed" });
+-    return fallback;
+-  }
+-}
+-
+-async function collect(): Promise<ServerHardwareInfo> {
+-  const [cpuData, graphics, memLayout, osInfo, systemInfo, biosInfo, baseboardInfo, batteryData, networkIfaces] =
+-    await Promise.all([
+-      probe("server-info.cpu", () => si.cpu(), null),
+-      probe("server-info.graphics", () => si.graphics(), { controllers: [], displays: [] }),
+-      probe("server-info.memLayout", () => si.memLayout(), []),
+-      probe("server-info.osInfo", () => si.osInfo(), null),
+-      probe("server-info.system", () => si.system(), null),
+-      probe("server-info.bios", () => si.bios(), null),
+-      probe("server-info.baseboard", () => si.baseboard(), null),
+-      probe("server-info.battery", () => si.battery(), null),
+-      probe("server-info.networkInterfaces", () => si.networkInterfaces(), []),
+-    ]);
+-
+-  return {
+-    fetchedAt: new Date().toISOString(),
+-    os: {
+-      platform: toStr(osInfo?.platform) ?? os.platform(),
+-      distro: toStr(osInfo?.distro),
+-      release: toStr(osInfo?.release),
+-      kernel: toStr(osInfo?.kernel),
+-      arch: toStr(osInfo?.arch) ?? os.arch(),
+-      codename: toStr(osInfo?.codename),
+-      hostname: os.hostname(),
+-    },
+-    system: {
+-      manufacturer: toStr(systemInfo?.manufacturer),
+-      model: toStr(systemInfo?.model),
+-      version: toStr(systemInfo?.version),
+-      serial: toStr(systemInfo?.serial),
+-      uuid: toStr(systemInfo?.uuid),
+-      sku: toStr(systemInfo?.sku),
+-    },
+-    bios: {
+-      vendor: toStr(biosInfo?.vendor),
+-      version: toStr(biosInfo?.version),
+-      releaseDate: toStr(biosInfo?.releaseDate),
+-      revision: toStr(biosInfo?.revision),
+-    },
+-    baseboard: {
+-      manufacturer: toStr(baseboardInfo?.manufacturer),
+-      model: toStr(baseboardInfo?.model),
+-      version: toStr(baseboardInfo?.version),
+-    },
+-    cpu: {
+-      manufacturer: toStr(cpuData?.manufacturer),
+-      brand: toStr(cpuData?.brand),
+-      speedGhz: toNum(cpuData?.speed),
+-      maxSpeedGhz: toNum(cpuData?.speedMax),
+-      cores: typeof cpuData?.cores === "number" && cpuData.cores > 0 ? cpuData.cores : os.cpus().length,
+-      physicalCores: typeof cpuData?.physicalCores === "number" && cpuData.physicalCores > 0 ? cpuData.physicalCores : null,
+-      processors: typeof cpuData?.processors === "number" && cpuData.processors > 0 ? cpuData.processors : null,
+-      socket: toStr(cpuData?.socket),
+-      governor: toStr(cpuData?.governor),
+-    },
+-    memory: {
+-      totalBytes: os.totalmem(),
+-      slots: memLayout.map((slot) => ({
+-        bank: toStr(slot.bank),
+-        type: toStr(slot.type),
+-        formFactor: toStr(slot.formFactor),
+-        sizeBytes: typeof slot.size === "number" && slot.size > 0 ? slot.size : null,
+-        clockSpeedMhz: typeof slot.clockSpeed === "number" && slot.clockSpeed > 0 ? slot.clockSpeed : null,
+-        manufacturer: toStr(slot.manufacturer),
+-      })),
+-    },
+-    gpu: {
+-      controllers: graphics.controllers.map((ctrl) => ({
+-        vendor: toStr(ctrl.vendor),
+-        model: toStr(ctrl.model),
+-        bus: toStr(ctrl.bus),
+-        vramBytes: typeof ctrl.vram === "number" && ctrl.vram > 0 ? ctrl.vram * 1_048_576 : null,
+-        subVendor: toStr(ctrl.subVendor),
+-      })),
+-    },
+-    battery: {
+-      hasBattery: Boolean(batteryData?.hasBattery),
+-      manufacturer: batteryData?.hasBattery ? toStr(batteryData?.manufacturer) : null,
+-      maxCapacityWh: batteryData?.hasBattery && typeof batteryData.maxCapacity === "number" && batteryData.maxCapacity > 0
+-        ? Number(batteryData.maxCapacity.toFixed(1)) : null,
+-      designedCapacityWh: batteryData?.hasBattery && typeof batteryData.designedCapacity === "number" && batteryData.designedCapacity > 0
+-        ? Number(batteryData.designedCapacity.toFixed(1)) : null,
+-      cycleCount: batteryData?.hasBattery && typeof batteryData.cycleCount === "number" && batteryData.cycleCount >= 0
+-        ? Math.round(batteryData.cycleCount) : null,
+-    },
+-    network: {
+-      interfaces: (Array.isArray(networkIfaces) ? networkIfaces : [])
+-        .filter((iface) => !iface.internal && !iface.virtual && iface.iface)
+-        .map((iface) => ({
+-          iface: iface.iface,
+-          type: toStr(iface.type),
+-          operstate: iface.operstate === "up" || iface.operstate === "down" ? iface.operstate : null,
+-          ip4: toStr(iface.ip4),
+-          ip4subnet: toStr(iface.ip4subnet),
+-          ip6: toStr(iface.ip6),
+-          mac: toStr(iface.mac),
+-          speedMbps: typeof iface.speed === "number" && iface.speed > 0 ? iface.speed : null,
+-          duplex: toStr(iface.duplex),
+-          dhcp: Boolean(iface.dhcp),
+-          isDefault: Boolean(iface.default),
+-        })),
+-    },
+-  };
+-}
+-
+-export async function getServerHardwareInfo(): Promise<ServerHardwareInfo> {
+-  if (cache && cache.expiresAt > Date.now()) return cache.value;
+-
+-  const value = await collect();
+-  cache = { value, expiresAt: Date.now() + CACHE_TTL_MS };
+-  return value;
+-}
++import "server-only";
++
++import { logServerAction } from "@/lib/server/logging/logger";
++import type { ServerHardwareInfo } from "@/lib/shared/contracts/server-info";
++import os from "node:os";
++import si from "systeminformation";
++import { readArmSocHardware } from "./arm-soc-hardware";
++import { readLinuxBatteryTelemetry } from "./linux-mobile-telemetry";
++
++const CACHE_TTL_MS = 5 * 60 * 1_000;
++
++let cache: { value: ServerHardwareInfo; expiresAt: number } | null = null;
++
++function toStr(value: unknown): string | null {
++  if (typeof value !== "string") return null;
++  const s = value.trim();
++  return s.length > 0 && s !== "Default string" && s !== "To Be Filled By O.A.M.E." ? s : null;
++}
++
++function toNum(value: unknown): number | null {
++  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) return null;
++  return value;
++}
++
++async function probe<T>(action: string, fn: () => Promise<T>, fallback: T): Promise<T> {
++  try {
++    return await fn();
++  } catch (error) {
++    logServerAction({ level: "warn", layer: "service", action, status: "error", error, message: "probe failed" });
++    return fallback;
++  }
++}
++
++async function collect(): Promise<ServerHardwareInfo> {
++  const [cpuData, graphics, memLayout, osInfo, systemInfo, biosInfo, baseboardInfo, batteryData, networkIfaces, armSoc] =
++    await Promise.all([
++      probe("server-info.cpu", () => si.cpu(), null),
++      probe("server-info.graphics", () => si.graphics(), { controllers: [], displays: [] }),
++      probe("server-info.memLayout", () => si.memLayout(), []),
++      probe("server-info.osInfo", () => si.osInfo(), null),
++      probe("server-info.system", () => si.system(), null),
++      probe("server-info.bios", () => si.bios(), null),
++      probe("server-info.baseboard", () => si.baseboard(), null),
++      probe("server-info.battery", async () =>
++        (os.platform() === "linux" ? await readLinuxBatteryTelemetry() : null) ?? si.battery(), null),
++      probe("server-info.networkInterfaces", () => si.networkInterfaces(), []),
++      os.platform() === "linux" && ["arm", "arm64"].includes(os.arch())
++        ? probe("server-info.arm-soc", () => readArmSocHardware(), null) : Promise.resolve(null),
++    ]);
++
++  const installedBytes = armSoc?.installedMemoryBytes && armSoc.installedMemoryBytes >= os.totalmem()
++    ? armSoc.installedMemoryBytes : null;
++
++  return {
++    fetchedAt: new Date().toISOString(),
++    os: {
++      platform: toStr(osInfo?.platform) ?? os.platform(),
++      distro: toStr(osInfo?.distro),
++      release: toStr(osInfo?.release),
++      kernel: toStr(osInfo?.kernel),
++      arch: toStr(osInfo?.arch) ?? os.arch(),
++      codename: toStr(osInfo?.codename),
++      hostname: os.hostname(),
++    },
++    system: {
++      manufacturer: toStr(systemInfo?.manufacturer),
++      model: toStr(systemInfo?.model),
++      version: toStr(systemInfo?.version),
++      serial: toStr(systemInfo?.serial),
++      uuid: toStr(systemInfo?.uuid),
++      sku: toStr(systemInfo?.sku),
++    },
++    bios: {
++      vendor: toStr(biosInfo?.vendor),
++      version: toStr(biosInfo?.version),
++      releaseDate: toStr(biosInfo?.releaseDate),
++      revision: toStr(biosInfo?.revision),
++    },
++    baseboard: {
++      manufacturer: toStr(baseboardInfo?.manufacturer),
++      model: toStr(baseboardInfo?.model),
++      version: toStr(baseboardInfo?.version),
++    },
++    cpu: {
++      manufacturer: armSoc?.cpu && /^Cortex-/i.test(cpuData?.manufacturer ?? "") ? "ARM" : toStr(cpuData?.manufacturer),
++      brand: armSoc?.cpu?.brand ?? toStr(cpuData?.brand),
++      speedGhz: armSoc?.cpu?.speedGhz ?? toNum(cpuData?.speed),
++      maxSpeedGhz: armSoc?.cpu?.maxSpeedGhz ?? toNum(cpuData?.speedMax),
++      cores: armSoc?.cpu?.cores ?? (typeof cpuData?.cores === "number" && cpuData.cores > 0 ? cpuData.cores : os.cpus().length),
++      physicalCores: armSoc?.cpu?.physicalCores ?? (typeof cpuData?.physicalCores === "number" && cpuData.physicalCores > 0 ? cpuData.physicalCores : null),
++      processors: typeof cpuData?.processors === "number" && cpuData.processors > 0 ? cpuData.processors : null,
++      socket: toStr(cpuData?.socket),
++      governor: armSoc?.cpu?.governor ?? toStr(cpuData?.governor),
++    },
++    memory: {
++      totalBytes: os.totalmem(),
++      installedBytes,
++      reservedBytes: installedBytes ? installedBytes - os.totalmem() : null,
++      onBoard: installedBytes !== null,
++      slots: installedBytes ? [{ bank: "On-board RAM", type: null, formFactor: "Soldered", sizeBytes: installedBytes, clockSpeedMhz: null, manufacturer: null }] : memLayout.map((slot) => ({
++        bank: toStr(slot.bank),
++        type: toStr(slot.type),
++        formFactor: toStr(slot.formFactor),
++        sizeBytes: typeof slot.size === "number" && slot.size > 0 ? slot.size : null,
++        clockSpeedMhz: typeof slot.clockSpeed === "number" && slot.clockSpeed > 0 ? slot.clockSpeed : null,
++        manufacturer: toStr(slot.manufacturer),
++      })),
++    },
++    gpu: {
++      controllers: graphics.controllers.length === 0 && armSoc?.gpu ? [armSoc.gpu] : graphics.controllers.map((ctrl) => ({
++        vendor: toStr(ctrl.vendor),
++        model: toStr(ctrl.model),
++        bus: toStr(ctrl.bus),
++        vramBytes: typeof ctrl.vram === "number" && ctrl.vram > 0 ? ctrl.vram * 1_048_576 : null,
++        subVendor: toStr(ctrl.subVendor),
++      })),
++    },
++    battery: {
++      hasBattery: Boolean(batteryData?.hasBattery),
++      manufacturer: batteryData?.hasBattery ? toStr(batteryData?.manufacturer) : null,
++      maxCapacityWh: batteryData?.hasBattery && typeof batteryData.maxCapacity === "number" && batteryData.maxCapacity > 0
++        ? Number(batteryData.maxCapacity.toFixed(1)) : null,
++      designedCapacityWh: batteryData?.hasBattery && typeof batteryData.designedCapacity === "number" && batteryData.designedCapacity > 0
++        ? Number(batteryData.designedCapacity.toFixed(1)) : null,
++      cycleCount: batteryData?.hasBattery && typeof batteryData.cycleCount === "number" && batteryData.cycleCount >= 0
++        ? Math.round(batteryData.cycleCount) : null,
++    },
++    network: {
++      interfaces: (Array.isArray(networkIfaces) ? networkIfaces : [])
++        .filter((iface) => !iface.internal && !iface.virtual && iface.iface)
++        .map((iface) => ({
++          iface: iface.iface,
++          type: toStr(iface.type),
++          operstate: iface.operstate === "up" || iface.operstate === "down" ? iface.operstate : null,
++          ip4: toStr(iface.ip4),
++          ip4subnet: toStr(iface.ip4subnet),
++          ip6: toStr(iface.ip6),
++          mac: toStr(iface.mac),
++          speedMbps: typeof iface.speed === "number" && iface.speed > 0 ? iface.speed : null,
++          duplex: toStr(iface.duplex),
++          dhcp: Boolean(iface.dhcp),
++          isDefault: Boolean(iface.default),
++        })),
++    },
++  };
++}
++
++export async function getServerHardwareInfo(): Promise<ServerHardwareInfo> {
++  if (cache && cache.expiresAt > Date.now()) return cache.value;
++
++  const value = await collect();
++  cache = { value, expiresAt: Date.now() + CACHE_TTL_MS };
++  return value;
++}
+diff --git a/lib/server/modules/system/service.ts b/lib/server/modules/system/service.ts
+index f70f2c4..62b939c 100644
+--- a/lib/server/modules/system/service.ts
++++ b/lib/server/modules/system/service.ts
+@@ -1,867 +1,875 @@
+-import "server-only";
+-
+-import { LruCache } from "@/lib/server/cache/lru";
+-import { memoizeAsync } from "@/lib/server/cache/memoize-async";
+-import { serverEnv } from "@/lib/server/env";
+-import { logServerAction } from "@/lib/server/logging/logger";
+-import type { SmartDiskInfo, StorageMetrics, SystemMetricsSnapshot } from "@/lib/shared/contracts/system";
+-import os from "node:os";
+-import { statfs } from "node:fs/promises";
+-import path from "node:path";
+-import si from "systeminformation";
+-import { isContainerRuntime } from "@/lib/server/modules/system/update-service";
+-import {
+-  createDiskRateTracker,
+-  readDiskCounters,
+-  totalMegabytesPerSecond,
+-} from "@/lib/server/modules/system/disk-activity";
+-import { createCpuLoadTracker, readCpuTimes } from "@/lib/server/modules/system/cpu-activity";
+-import {
+-  createNetworkRateTracker,
+-  readDefaultRouteInterface,
+-  readInterfaceAddresses,
+-  readInterfaceCounters,
+-} from "@/lib/server/modules/system/network-activity";
+-import {
+-  getNetworkStatusFromHelper,
+-  isNetworkHelperUnavailableError,
+-} from "@/lib/server/modules/network/helper-client";
+-
+-// CPU load, disk throughput and network throughput are rates between two
+-// kernel counter readings, one per collected snapshot.
+-const snapshotCpuLoad = createCpuLoadTracker();
+-const snapshotDiskRates = createDiskRateTracker();
+-const snapshotNetworkRates = createNetworkRateTracker();
+-
+-const metricsCache = new LruCache<SystemMetricsSnapshot>(
+-  8,
+-  serverEnv.METRICS_CACHE_TTL_MS,
+-);
+-const HELPER_STATUS_CACHE_TTL_MS = 10_000;
+-const HELPER_STATUS_UNAVAILABLE_BACKOFF_MS = 15_000;
+-const HELPER_STATUS_ERROR_LOG_COOLDOWN_MS = 30_000;
+-const STORAGE_DETAILS_CACHE_TTL_MS = 60_000;
+-const WIFI_NETWORKS_CACHE_TTL_MS = 30_000;
+-const CPU_TEMPERATURE_CACHE_TTL_MS = 10_000;
+-const WIFI_CONNECTIONS_CACHE_TTL_MS = 10_000;
+-
+-// Temperature and the Wi-Fi link change slowly, and systeminformation spawns
+-// commands to read each of them: read them every 10s, not on every snapshot.
+-const getCpuTemperature = memoizeAsync(
+-  () => withFallback("system.metrics.cpuTemperature", () => si.cpuTemperature(), null),
+-  CPU_TEMPERATURE_CACHE_TTL_MS,
+-);
+-const getWifiConnections = memoizeAsync(
+-  () => withFallback("system.metrics.wifiConnections", () => si.wifiConnections(), []),
+-  WIFI_CONNECTIONS_CACHE_TTL_MS,
+-);
+-
+-/** Filesystem types that are virtual/pseudo and should not appear as real disk volumes. */
+-const VIRTUAL_FS_TYPES = new Set([
+-  "overlay",
+-  "tmpfs",
+-  "squashfs",
+-  "devtmpfs",
+-  "sysfs",
+-  "proc",
+-  "cgroup",
+-  "cgroup2",
+-  "nsfs",
+-  "fusectl",
+-  "hugetlbfs",
+-  "mqueue",
+-  "debugfs",
+-  "tracefs",
+-  "securityfs",
+-  "configfs",
+-  "pstore",
+-  "autofs",
+-  "efivarfs",
+-  "bpf",
+-]);
+-
+-type CachedStorageDetails = Pick<StorageMetrics, "volumes" | "raid" | "smart">;
+-
+-let helperStatusCache:
+-  | {
+-      value: Awaited<ReturnType<typeof getNetworkStatusFromHelper>>;
+-      expiresAt: number;
+-    }
+-  | null = null;
+-let wifiNetworksCache: {
+-  value: Awaited<ReturnType<typeof si.wifiNetworks>>;
+-  expiresAt: number;
+-} | null = null;
+-let wifiNetworksRefreshing = false;
+-let storageDetailsCache:
+-  | {
+-      value: CachedStorageDetails;
+-      expiresAt: number;
+-    }
+-  | null = null;
+-/** Last successfully collected storage details — persists beyond cache TTL for stale serving. */
+-let storageDetailsLastKnown: CachedStorageDetails | null = null;
+-/** True while a background (or first-ever) storage detail collection is in flight. */
+-let storageDetailsRefreshing = false;
+-let helperStatusUnavailableUntil = 0;
+-let lastHelperStatusErrorLogAt = 0;
+-/**
+- * In-flight snapshot collection, shared by all concurrent callers.
+- * collectSnapshot shells out to `sensors`, `nmcli` and `ip`; on a slow box it can
+- * outlast METRICS_PUBLISH_INTERVAL_MS, and without this guard every SSE tick
+- * started another one on top of the last until the subprocesses ate the CPU.
+- */
+-let snapshotInFlight: Promise<SystemMetricsSnapshot> | null = null;
+-
+-function clampPercent(value: number) {
+-  if (!Number.isFinite(value)) return 0;
+-  return Math.max(0, Math.min(Number(value.toFixed(2)), 100));
+-}
+-
+-function toNumber(value: number | bigint) {
+-  if (typeof value === "bigint") {
+-    return Number(value);
+-  }
+-  return value;
+-}
+-
+-function toFiniteNumber(value: unknown) {
+-  if (typeof value !== "number" || Number.isNaN(value) || !Number.isFinite(value)) {
+-    return null;
+-  }
+-  return value;
+-}
+-
+-function baseDeviceFromPartition(device: string) {
+-  return device.replace(/p?\d+$/, "");
+-}
+-
+-function deriveVolumeLabel(input: {
+-  device: string;
+-  mountPath: string;
+-  mediaType: string | null;
+-}) {
+-  const mountName =
+-    input.mountPath === "/"
+-      ? "System"
+-      : input.mountPath.startsWith("/DATA")
+-        ? "Data"
+-        : path.basename(input.mountPath) || "Volume";
+-  const mediaSuffix = input.mediaType ? ` (${input.mediaType})` : "";
+-  return `${input.device} - ${mountName}${mediaSuffix}`;
+-}
+-
+-function inferRaidFromVolumes(
+-  volumes: NonNullable<StorageMetrics["volumes"]>,
+-): StorageMetrics["raid"] {
+-  const zfsVolumes = volumes.filter((volume) =>
+-    volume.filesystem?.toLowerCase().includes("zfs"),
+-  );
+-  if (zfsVolumes.length > 0) {
+-    return {
+-      name: "zpool",
+-      type: "ZFS",
+-      totalBytes: zfsVolumes.reduce((sum, volume) => sum + volume.totalBytes, 0),
+-      redundancy: "Managed by ZFS",
+-      status: "healthy",
+-    };
+-  }
+-
+-  const mdVolumes = volumes.filter((volume) => volume.device.startsWith("/dev/md"));
+-  if (mdVolumes.length > 0) {
+-    return {
+-      name: path.basename(mdVolumes[0].device),
+-      type: "Linux RAID",
+-      totalBytes: mdVolumes.reduce((sum, volume) => sum + volume.totalBytes, 0),
+-      redundancy: "Managed by mdadm",
+-      status: "healthy",
+-    };
+-  }
+-
+-  return null;
+-}
+-
+-function summarizeSmartHealth(
+-  diskLayout: Awaited<ReturnType<typeof si.diskLayout>>,
+-): StorageMetrics["smart"] {
+-  if (diskLayout.length === 0) {
+-    return null;
+-  }
+-
+-  let healthyDisks = 0;
+-  let failingDisks = 0;
+-  const disks: SmartDiskInfo[] = [];
+-
+-  for (const disk of diskLayout) {
+-    if (typeof disk.device !== "string" || disk.device.trim().length === 0) continue;
+-
+-    const rawStatus =
+-      typeof disk.smartStatus === "string"
+-        ? disk.smartStatus.trim().toLowerCase()
+-        : "";
+-
+-    let diskStatus: SmartDiskInfo["status"];
+-    if (
+-      rawStatus.includes("fail") ||
+-      rawStatus.includes("error") ||
+-      rawStatus.includes("pred") ||
+-      rawStatus.includes("bad")
+-    ) {
+-      diskStatus = "degraded";
+-      failingDisks += 1;
+-    } else if (
+-      rawStatus.includes("ok") ||
+-      rawStatus.includes("good") ||
+-      rawStatus.includes("pass")
+-    ) {
+-      diskStatus = "healthy";
+-      healthyDisks += 1;
+-    } else {
+-      diskStatus = "unknown";
+-    }
+-
+-    const temperatureCelsius =
+-      disk.temperature !== null &&
+-      typeof disk.temperature === "number" &&
+-      Number.isFinite(disk.temperature) &&
+-      disk.temperature > 0
+-        ? Math.round(disk.temperature)
+-        : null;
+-
+-    const smartDataHours = disk.smartData?.power_on_time?.hours;
+-    const powerOnHours =
+-      typeof smartDataHours === "number" &&
+-      Number.isFinite(smartDataHours) &&
+-      smartDataHours >= 0
+-        ? Math.round(smartDataHours)
+-        : null;
+-
+-    const sizeBytes =
+-      typeof disk.size === "number" && Number.isFinite(disk.size) && disk.size > 0
+-        ? disk.size
+-        : null;
+-
+-    disks.push({
+-      device: disk.device.trim(),
+-      name:
+-        typeof disk.name === "string" && disk.name.trim().length > 0
+-          ? disk.name.trim()
+-          : null,
+-      vendor:
+-        typeof disk.vendor === "string" && disk.vendor.trim().length > 0
+-          ? disk.vendor.trim()
+-          : null,
+-      type:
+-        typeof disk.type === "string" && disk.type.trim().length > 0
+-          ? disk.type.trim().toUpperCase()
+-          : null,
+-      sizeBytes,
+-      status: diskStatus,
+-      smartStatus:
+-        typeof disk.smartStatus === "string" && disk.smartStatus.trim().length > 0
+-          ? disk.smartStatus.trim()
+-          : "Unknown",
+-      temperatureCelsius,
+-      powerOnHours,
+-    });
+-  }
+-
+-  if (disks.length === 0) {
+-    return null;
+-  }
+-
+-  const status =
+-    failingDisks > 0 ? "degraded" : healthyDisks > 0 ? "healthy" : "unknown";
+-
+-  const message =
+-    status === "degraded"
+-      ? `${failingDisks} drive(s) reported potential SMART issues.`
+-      : status === "healthy"
+-        ? `All ${healthyDisks} SMART-capable drive(s) report healthy status.`
+-        : "SMART status unavailable for detected drives.";
+-
+-  return {
+-    status,
+-    healthyDisks,
+-    failingDisks,
+-    checkedAt: new Date().toISOString(),
+-    message,
+-    disks,
+-  };
+-}
+-
+-function readStorageDetailsCache() {
+-  if (!storageDetailsCache) return null;
+-  if (storageDetailsCache.expiresAt <= Date.now()) {
+-    storageDetailsCache = null;
+-    return null;
+-  }
+-  return storageDetailsCache.value;
+-}
+-
+-/**
+- * Execute the expensive storage detail collection (fsSize + diskLayout probes).
+- * Updates both the TTL cache and the persistent lastKnown value.
+- */
+-async function executeStorageDetailCollection(): Promise<CachedStorageDetails> {
+-  const [fsSizes, diskLayout] = await Promise.all([
+-    withFallback("system.metrics.storage.fsSize", () => si.fsSize(), []),
+-    withFallback("system.metrics.storage.diskLayout", () => si.diskLayout(), []),
+-  ]);
+-
+-  const mediaTypeByDevice = new Map<string, string>();
+-  for (const disk of diskLayout) {
+-    if (typeof disk.device !== "string" || disk.device.trim().length === 0) continue;
+-    const mediaType =
+-      typeof disk.type === "string" && disk.type.trim().length > 0
+-        ? disk.type.trim().toUpperCase()
+-        : null;
+-    if (!mediaType) continue;
+-    mediaTypeByDevice.set(baseDeviceFromPartition(disk.device), mediaType);
+-  }
+-
+-  // Track seen devices so we only include one entry per physical device
+-  // (e.g. /dev/nvme0n1p2 mounted at both / and /boot should show only one).
+-  const seenDevices = new Set<string>();
+-
+-  const volumes = fsSizes
+-    .map((fsSize) => {
+-      const totalBytesRaw = toFiniteNumber(fsSize.size);
+-      if (totalBytesRaw === null || totalBytesRaw <= 0) {
+-        return null;
+-      }
+-
+-      const filesystem =
+-        typeof fsSize.type === "string" && fsSize.type.trim().length > 0
+-          ? fsSize.type.trim()
+-          : null;
+-
+-      // Skip virtual / pseudo filesystems (Docker overlay layers, tmpfs, snap, etc.)
+-      if (filesystem && VIRTUAL_FS_TYPES.has(filesystem.toLowerCase())) {
+-        return null;
+-      }
+-
+-      const totalBytes = Math.max(Math.round(totalBytesRaw), 0);
+-      const usedBytesRaw = toFiniteNumber(fsSize.used);
+-      const usedPercentRaw = toFiniteNumber(fsSize.use);
+-      const inferredUsedBytes =
+-        usedPercentRaw !== null
+-          ? Math.round((totalBytes * clampPercent(usedPercentRaw)) / 100)
+-          : 0;
+-      const usedBytes =
+-        usedBytesRaw !== null
+-          ? Math.max(Math.round(usedBytesRaw), 0)
+-          : Math.max(inferredUsedBytes, 0);
+-      const usedPercent =
+-        usedPercentRaw !== null
+-          ? clampPercent(usedPercentRaw)
+-          : totalBytes > 0
+-            ? clampPercent((usedBytes / totalBytes) * 100)
+-            : 0;
+-
+-      const mountPath =
+-        typeof fsSize.mount === "string" && fsSize.mount.trim().length > 0
+-          ? fsSize.mount
+-          : "/";
+-      const device =
+-        typeof fsSize.fs === "string" && fsSize.fs.trim().length > 0
+-          ? fsSize.fs
+-          : mountPath;
+-
+-      // Deduplicate real block devices — keep only the first (most significant) mount point
+-      const baseDevice = baseDeviceFromPartition(device);
+-      if (baseDevice.startsWith("/dev/") && seenDevices.has(device)) {
+-        return null;
+-      }
+-      if (baseDevice.startsWith("/dev/")) {
+-        seenDevices.add(device);
+-      }
+-
+-      const mediaType = mediaTypeByDevice.get(baseDevice) ?? null;
+-
+-      return {
+-        id: `${device}:${mountPath}`,
+-        label: deriveVolumeLabel({ device, mountPath, mediaType }),
+-        mountPath,
+-        device,
+-        filesystem,
+-        mediaType,
+-        totalBytes,
+-        usedBytes: Math.min(usedBytes, totalBytes),
+-        usedPercent,
+-      };
+-    })
+-    .filter((volume): volume is NonNullable<typeof volume> => volume !== null)
+-    .sort((left, right) => right.usedBytes - left.usedBytes)
+-    .slice(0, 8);
+-
+-  const details: CachedStorageDetails = {
+-    volumes,
+-    raid: inferRaidFromVolumes(volumes),
+-    smart: summarizeSmartHealth(diskLayout),
+-  };
+-
+-  storageDetailsCache = {
+-    value: details,
+-    expiresAt: Date.now() + STORAGE_DETAILS_CACHE_TTL_MS,
+-  };
+-  storageDetailsLastKnown = details;
+-
+-  return details;
+-}
+-
+-/**
+- * Returns storage details using a stale-while-revalidate strategy:
+- *  - Fresh cache hit  → return immediately (no I/O).
+- *  - Stale but data exists → return last-known value instantly; kick off a
+- *    background refresh so the *next* call gets fresh data.
+- *  - First call ever → must await the probe (no prior data to serve).
+- *
+- * This prevents the 1-3 s fsSize/diskLayout probes from blocking every SSE push
+- * after the 60-second TTL expires.
+- */
+-async function collectStorageDetailMetrics(): Promise<CachedStorageDetails> {
+-  // 1) Fresh cache hit — no I/O needed.
+-  const cached = readStorageDetailsCache();
+-  if (cached) return cached;
+-
+-  // 2) We have a previously collected value. Serve it immediately and refresh
+-  //    in the background so the next cache miss gets fresh data.
+-  if (storageDetailsLastKnown !== null) {
+-    if (!storageDetailsRefreshing) {
+-      storageDetailsRefreshing = true;
+-      void executeStorageDetailCollection()
+-        .catch((error) => {
+-          logServerAction({
+-            level: "warn",
+-            layer: "service",
+-            action: "system.metrics.storage.background-refresh",
+-            status: "error",
+-            message: "Background storage detail refresh failed",
+-            error,
+-          });
+-        })
+-        .finally(() => {
+-          storageDetailsRefreshing = false;
+-        });
+-    }
+-    return storageDetailsLastKnown;
+-  }
+-
+-  // 3) First call ever — must await synchronously (no stale value to serve).
+-  storageDetailsRefreshing = true;
+-  try {
+-    return await executeStorageDetailCollection();
+-  } finally {
+-    storageDetailsRefreshing = false;
+-  }
+-}
+-
+-async function collectStorageMetrics() {
+-  try {
+-    const configuredRoot = serverEnv.FILES_ROOT;
+-    const targetPath = path.isAbsolute(configuredRoot)
+-      ? configuredRoot
+-      : path.resolve(process.cwd(), configuredRoot);
+-    const filesystemStats = await statfs(targetPath);
+-
+-    const blockSize = toNumber(filesystemStats.bsize);
+-    const totalBlocks = toNumber(filesystemStats.blocks);
+-    const availableBlocks = toNumber(filesystemStats.bavail);
+-    const totalBytes = Math.max(Math.round(blockSize * totalBlocks), 0);
+-    const availableBytes = Math.max(Math.round(blockSize * availableBlocks), 0);
+-    const usedBytes = Math.max(totalBytes - availableBytes, 0);
+-    const usedPercent = totalBytes > 0 ? (usedBytes / totalBytes) * 100 : 0;
+-    const details = await collectStorageDetailMetrics();
+-
+-    return {
+-      mountPath: targetPath,
+-      totalBytes,
+-      availableBytes,
+-      usedBytes,
+-      usedPercent: clampPercent(usedPercent),
+-      ...details,
+-    };
+-  } catch (error) {
+-    logServerAction({
+-      level: "warn",
+-      layer: "service",
+-      action: "system.metrics.storage",
+-      status: "error",
+-      message: "Unable to collect storage metrics",
+-      error,
+-    });
+-    return null;
+-  }
+-}
+-
+-function toNullableMetric(
+-  value: number | undefined,
+-  options?: {
+-    precision?: number;
+-    allowZero?: boolean;
+-  },
+-) {
+-  if (typeof value !== "number" || Number.isNaN(value)) return null;
+-
+-  const allowZero = options?.allowZero ?? false;
+-  if (!allowZero && value <= 0) return null;
+-
+-  const precision = options?.precision ?? 1;
+-  return Number(value.toFixed(precision));
+-}
+-
+-function toNullablePercent(value: number | undefined) {
+-  if (typeof value !== "number" || Number.isNaN(value)) return null;
+-  return Math.max(0, Math.min(Math.round(value), 100));
+-}
+-
+-function toNullableText(value: string | undefined | null) {
+-  if (typeof value !== "string") return null;
+-  const normalized = value.trim();
+-  return normalized.length > 0 ? normalized : null;
+-}
+-
+-function toDesignToMaxCapacityPercent(
+-  designedCapacityWh: number | null,
+-  maxCapacityWh: number | null,
+-) {
+-  if (designedCapacityWh === null || maxCapacityWh === null) return null;
+-  if (maxCapacityWh <= 0) return null;
+-
+-  return Number(((maxCapacityWh / designedCapacityWh) * 100).toFixed(1));
+-}
+-
+-/**
+- * Returns cached WiFi networks immediately (or [] on first call) and
+- * triggers a background scan so the next call gets fresh data.
+- * This prevents the 5-8s WiFi scan from blocking the metrics snapshot.
+- */
+-function getWifiNetworksStale(): Awaited<ReturnType<typeof si.wifiNetworks>> {
+-  const now = Date.now();
+-
+-  if (wifiNetworksCache && wifiNetworksCache.expiresAt > now) {
+-    return wifiNetworksCache.value;
+-  }
+-
+-  if (!wifiNetworksRefreshing) {
+-    wifiNetworksRefreshing = true;
+-    void withFallback("system.metrics.wifiNetworks", () => si.wifiNetworks(), [])
+-      .then((networks) => {
+-        wifiNetworksCache = { value: networks, expiresAt: Date.now() + WIFI_NETWORKS_CACHE_TTL_MS };
+-      })
+-      .finally(() => {
+-        wifiNetworksRefreshing = false;
+-      });
+-  }
+-
+-  return wifiNetworksCache?.value ?? [];
+-}
+-
+-/** Download and upload rate of an interface since the previous snapshot; null on the first one. */
+-async function readNetworkRate(iface: string | null) {
+-  if (!iface) return null;
+-  const counters = await readInterfaceCounters(iface);
+-  return counters ? snapshotNetworkRates(iface, counters, Date.now()) : null;
+-}
+-
+-async function withFallback<T>(
+-  action: string,
+-  run: () => Promise<T>,
+-  fallback: T,
+-) {
+-  try {
+-    return await run();
+-  } catch (error) {
+-    logServerAction({
+-      level: "warn",
+-      layer: "service",
+-      action,
+-      status: "error",
+-      error,
+-      message: "systeminformation probe failed; using fallback",
+-    });
+-    return fallback;
+-  }
+-}
+-
+-async function collectSnapshot(): Promise<SystemMetricsSnapshot> {
+-  const [oneMinute, fiveMinute, fifteenMinute] = os.loadavg();
+-  const cpuCores = os.cpus().length || 1;
+-  const totalBytes = os.totalmem();
+-  const freeBytes = os.freemem();
+-  const usedBytes = Math.max(totalBytes - freeBytes, 0);
+-  const defaultCpuPercent = Math.min((oneMinute / cpuCores) * 100, 100);
+-
+-  const [
+-    cpuTemperature,
+-    batteryData,
+-    wifiConnections,
+-    wifiNetworks,
+-    defaultRouteIface,
+-    storageMetrics,
+-    diskCounters,
+-  ] = await Promise.all([
+-    getCpuTemperature(),
+-    withFallback("system.metrics.battery", () => si.battery(), null),
+-    getWifiConnections(),
+-    Promise.resolve(getWifiNetworksStale()),
+-    readDefaultRouteInterface(),
+-    collectStorageMetrics(),
+-    readDiskCounters(),
+-  ]);
+-  const cpuLoadPercent = snapshotCpuLoad(readCpuTimes());
+-  const diskIo = totalMegabytesPerSecond(
+-    diskCounters ? snapshotDiskRates(diskCounters, Date.now()) : new Map(),
+-  );
+-
+-  const mainTemperature = toNullableMetric(cpuTemperature?.main);
+-  const normalizedCoreTemps = (cpuTemperature?.cores ?? [])
+-    .map((coreTemp) => toNullableMetric(coreTemp))
+-    .filter((coreTemp): coreTemp is number => coreTemp !== null);
+-  const maxTemperature = toNullableMetric(cpuTemperature?.max);
+-
+-  // Try to get WiFi status from NetworkManager D-Bus helper first (more reliable),
+-  // but cache it to avoid querying DBus for every metrics stream frame.
+-  const helperStatus = await resolveHelperStatusForMetrics();
+-
+-  const primaryWifiConnection =
+-    wifiConnections.find(
+-      (connection) =>
+-        connection.iface.length > 0 || connection.ssid.trim().length > 0,
+-    ) ?? null;
+-  // The Wi-Fi interface when there is a Wi-Fi link, else the one carrying the default route.
+-  const primaryIface = primaryWifiConnection?.iface || defaultRouteIface;
+-  const primaryAddresses = primaryIface
+-    ? readInterfaceAddresses(primaryIface)
+-    : { ipv4: null, ipv6: null };
+-
+-  // Prefer D-Bus helper data for WiFi status (more reliable with NetworkManager)
+-  const connectedSsid = helperStatus?.ssid?.trim() ?? primaryWifiConnection?.ssid.trim() ?? "";
+-  const isWifiConnected = connectedSsid.length > 0;
+-  // Ethernet: no SSID but the primary interface has an IPv4 address
+-  const isEthernetConnected = !isWifiConnected && primaryAddresses.ipv4 !== null;
+-  const preferredIface = helperStatus?.iface ?? primaryIface ?? null;
+-  const networkRate = await readNetworkRate(preferredIface);
+-  const designedCapacityWh = batteryData?.hasBattery
+-    ? toNullableMetric(batteryData.designedCapacity, {
+-        precision: 0,
+-      })
+-    : null;
+-  const maxCapacityWh = batteryData?.hasBattery
+-    ? toNullableMetric(batteryData.maxCapacity, {
+-        precision: 0,
+-      })
+-    : null;
+-  const availableNetworks = wifiNetworks
+-    .filter((network) => network.ssid.trim().length > 0)
+-    .sort((left, right) => (right.quality ?? 0) - (left.quality ?? 0))
+-    .slice(0, 6)
+-    .map((network) => ({
+-      ssid: network.ssid.trim(),
+-      channel: Number.isFinite(network.channel) ? network.channel : null,
+-      qualityPercent: toNullablePercent(network.quality),
+-      security:
+-        network.security.length > 0
+-          ? network.security.join(", ")
+-          : network.rsnFlags.length > 0
+-            ? network.rsnFlags.join(", ")
+-            : null,
+-    }));
+-  return {
+-    timestamp: new Date().toISOString(),
+-    hostname: os.hostname(),
+-    platform: `${os.platform()} ${os.release()}`,
+-    architecture: os.arch(),
+-    uptimeSeconds: os.uptime(),
+-    cpu: {
+-      oneMinute,
+-      fiveMinute,
+-      fifteenMinute,
+-      normalizedPercent: clampPercent(cpuLoadPercent ?? defaultCpuPercent),
+-    },
+-    memory: {
+-      totalBytes,
+-      freeBytes,
+-      usedBytes,
+-      usedPercent: totalBytes > 0 ? (usedBytes / totalBytes) * 100 : 0,
+-    },
+-    temperature: {
+-      mainCelsius: mainTemperature,
+-      maxCelsius: maxTemperature,
+-      coresCelsius: normalizedCoreTemps,
+-    },
+-    diskIo,
+-    battery: {
+-      hasBattery: Boolean(batteryData?.hasBattery),
+-      isCharging: Boolean(batteryData?.isCharging),
+-      percent: batteryData?.hasBattery
+-        ? toNullablePercent(batteryData.percent)
+-        : null,
+-      timeRemainingMinutes:
+-        batteryData?.hasBattery &&
+-        typeof batteryData.timeRemaining === "number" &&
+-        batteryData.timeRemaining >= 0
+-          ? Math.round(batteryData.timeRemaining)
+-          : null,
+-      acConnected:
+-        typeof batteryData?.acConnected === "boolean"
+-          ? batteryData.acConnected
+-          : null,
+-      manufacturer: batteryData?.hasBattery
+-        ? toNullableText(batteryData?.manufacturer)
+-        : null,
+-      cycleCount:
+-        batteryData?.hasBattery &&
+-        typeof batteryData.cycleCount === "number" &&
+-        Number.isFinite(batteryData.cycleCount) &&
+-        batteryData.cycleCount >= 0
+-          ? Math.round(batteryData.cycleCount)
+-          : null,
+-      designedCapacityWh,
+-      maxCapacityWh,
+-      designToMaxCapacityPercent: toDesignToMaxCapacityPercent(
+-        designedCapacityWh,
+-        maxCapacityWh,
+-      ),
+-    },
+-    storage: storageMetrics ?? undefined,
+-    wifi: {
+-      connected: helperStatus?.connected ?? (isWifiConnected || isEthernetConnected),
+-      iface:
+-        helperStatus?.iface ?? (primaryIface || null),
+-      ssid: helperStatus?.ssid ?? (isWifiConnected ? connectedSsid : null),
+-      bssid: primaryWifiConnection?.bssid || null,
+-      signalPercent: helperStatus?.signalPercent ?? toNullablePercent(primaryWifiConnection?.quality),
+-      txRateMbps: toNullableMetric(primaryWifiConnection?.txRate, {
+-        precision: 1,
+-        allowZero: true,
+-      }),
+-      downloadMbps: toNullableMetric(
+-        networkRate ? (networkRate.rxBytesPerSec * 8) / 1_000_000 : undefined,
+-        {
+-          precision: 2,
+-          allowZero: true,
+-        },
+-      ),
+-      uploadMbps: toNullableMetric(
+-        networkRate ? (networkRate.txBytesPerSec * 8) / 1_000_000 : undefined,
+-        {
+-          precision: 2,
+-          allowZero: true,
+-        },
+-      ),
+-      ipv4: helperStatus?.ipv4 ?? primaryAddresses.ipv4,
+-      ipv6: primaryAddresses.ipv6,
+-      availableNetworks,
+-    },
+-    process: {
+-      pid: process.pid,
+-      uptimeSeconds: process.uptime(),
+-      nodeVersion: process.version,
+-      runtime: isContainerRuntime() ? "docker" : "host",
+-    },
+-  };
+-}
+-
+-export async function getSystemMetricsSnapshot(options?: {
+-  bypassCache?: boolean;
+-}) {
+-  const startedAt = performance.now();
+-
+-  if (!options?.bypassCache) {
+-    const cached = metricsCache.get("latest");
+-    if (cached) {
+-      logServerAction({
+-        level: "debug",
+-        layer: "service",
+-        action: "system.metrics.snapshot",
+-        status: "success",
+-        durationMs: Number((performance.now() - startedAt).toFixed(2)),
+-        meta: {
+-          cache: "hit",
+-        },
+-      });
+-      return cached;
+-    }
+-  }
+-
+-  const joinedInFlight = !options?.bypassCache && snapshotInFlight !== null;
+-  let pending = snapshotInFlight;
+-  if (!joinedInFlight || pending === null) {
+-    const collection: Promise<SystemMetricsSnapshot> = collectSnapshot().finally(() => {
+-      if (snapshotInFlight === collection) {
+-        snapshotInFlight = null;
+-      }
+-    });
+-    snapshotInFlight = collection;
+-    pending = collection;
+-  }
+-
+-  const snapshot = await pending;
+-  metricsCache.set("latest", snapshot);
+-
+-  logServerAction({
+-    level: "debug",
+-    layer: "service",
+-    action: "system.metrics.snapshot",
+-    status: "success",
+-    durationMs: Number((performance.now() - startedAt).toFixed(2)),
+-    meta: {
+-      cache: joinedInFlight ? "in-flight" : "miss",
+-    },
+-  });
+-
+-  return snapshot;
+-}
+-
+-function readHelperStatusCache() {
+-  if (!helperStatusCache) return null;
+-  if (helperStatusCache.expiresAt <= Date.now()) {
+-    helperStatusCache = null;
+-    return null;
+-  }
+-
+-  return helperStatusCache.value;
+-}
+-
+-async function resolveHelperStatusForMetrics() {
+-  const cached = readHelperStatusCache();
+-  if (cached) {
+-    return cached;
+-  }
+-
+-  if (Date.now() < helperStatusUnavailableUntil) {
+-    return null;
+-  }
+-
+-  try {
+-    const status = await getNetworkStatusFromHelper();
+-    helperStatusCache = {
+-      value: status,
+-      expiresAt: Date.now() + HELPER_STATUS_CACHE_TTL_MS,
+-    };
+-    helperStatusUnavailableUntil = 0;
+-    return status;
+-  } catch (error) {
+-    if (isNetworkHelperUnavailableError(error)) {
+-      helperStatusUnavailableUntil = Date.now() + HELPER_STATUS_UNAVAILABLE_BACKOFF_MS;
+-      return null;
+-    }
+-
+-    const now = Date.now();
+-    if (now - lastHelperStatusErrorLogAt >= HELPER_STATUS_ERROR_LOG_COOLDOWN_MS) {
+-      lastHelperStatusErrorLogAt = now;
+-      logServerAction({
+-        level: "warn",
+-        layer: "service",
+-        action: "system.metrics.network.helper",
+-        status: "error",
+-        message: "Failed to get network status from D-Bus helper",
+-        error,
+-      });
+-    }
+-
+-    return null;
+-  }
+-}
++import "server-only";
++
++import { LruCache } from "@/lib/server/cache/lru";
++import { memoizeAsync } from "@/lib/server/cache/memoize-async";
++import { serverEnv } from "@/lib/server/env";
++import { logServerAction } from "@/lib/server/logging/logger";
++import type { SmartDiskInfo, StorageMetrics, SystemMetricsSnapshot } from "@/lib/shared/contracts/system";
++import os from "node:os";
++import { statfs } from "node:fs/promises";
++import path from "node:path";
++import si from "systeminformation";
++import { readLinuxBatteryTelemetry, readLinuxCpuTemperature } from "./linux-mobile-telemetry";
++import { isContainerRuntime } from "@/lib/server/modules/system/update-service";
++import {
++  createDiskRateTracker,
++  readDiskCounters,
++  totalMegabytesPerSecond,
++} from "@/lib/server/modules/system/disk-activity";
++import { createCpuLoadTracker, readCpuTimes } from "@/lib/server/modules/system/cpu-activity";
++import {
++  createNetworkRateTracker,
++  readDefaultRouteInterface,
++  readInterfaceAddresses,
++  readInterfaceCounters,
++} from "@/lib/server/modules/system/network-activity";
++import {
++  getNetworkStatusFromHelper,
++  isNetworkHelperUnavailableError,
++} from "@/lib/server/modules/network/helper-client";
++
++// CPU load, disk throughput and network throughput are rates between two
++// kernel counter readings, one per collected snapshot.
++const snapshotCpuLoad = createCpuLoadTracker();
++const snapshotDiskRates = createDiskRateTracker();
++const snapshotNetworkRates = createNetworkRateTracker();
++
++const metricsCache = new LruCache<SystemMetricsSnapshot>(
++  8,
++  serverEnv.METRICS_CACHE_TTL_MS,
++);
++const HELPER_STATUS_CACHE_TTL_MS = 10_000;
++const HELPER_STATUS_UNAVAILABLE_BACKOFF_MS = 15_000;
++const HELPER_STATUS_ERROR_LOG_COOLDOWN_MS = 30_000;
++const STORAGE_DETAILS_CACHE_TTL_MS = 60_000;
++const WIFI_NETWORKS_CACHE_TTL_MS = 30_000;
++const CPU_TEMPERATURE_CACHE_TTL_MS = 10_000;
++const WIFI_CONNECTIONS_CACHE_TTL_MS = 10_000;
++
++// Temperature and the Wi-Fi link change slowly, and systeminformation spawns
++// commands to read each of them: read them every 10s, not on every snapshot.
++const getCpuTemperature = memoizeAsync(
++  () => os.platform() === "linux" && ["arm", "arm64"].includes(os.arch())
++    ? readLinuxCpuTemperature()
++    : withFallback("system.metrics.cpuTemperature", () => si.cpuTemperature(), null),
++  CPU_TEMPERATURE_CACHE_TTL_MS,
++);
++const getBatteryTelemetry = memoizeAsync(async () =>
++  (os.platform() === "linux" ? await readLinuxBatteryTelemetry() : null) ??
++    withFallback("system.metrics.battery", () => si.battery(), null),
++  10_000,
++);
++const getWifiConnections = memoizeAsync(
++  () => withFallback("system.metrics.wifiConnections", () => si.wifiConnections(), []),
++  WIFI_CONNECTIONS_CACHE_TTL_MS,
++);
++
++/** Filesystem types that are virtual/pseudo and should not appear as real disk volumes. */
++const VIRTUAL_FS_TYPES = new Set([
++  "overlay",
++  "tmpfs",
++  "squashfs",
++  "devtmpfs",
++  "sysfs",
++  "proc",
++  "cgroup",
++  "cgroup2",
++  "nsfs",
++  "fusectl",
++  "hugetlbfs",
++  "mqueue",
++  "debugfs",
++  "tracefs",
++  "securityfs",
++  "configfs",
++  "pstore",
++  "autofs",
++  "efivarfs",
++  "bpf",
++]);
++
++type CachedStorageDetails = Pick<StorageMetrics, "volumes" | "raid" | "smart">;
++
++let helperStatusCache:
++  | {
++      value: Awaited<ReturnType<typeof getNetworkStatusFromHelper>>;
++      expiresAt: number;
++    }
++  | null = null;
++let wifiNetworksCache: {
++  value: Awaited<ReturnType<typeof si.wifiNetworks>>;
++  expiresAt: number;
++} | null = null;
++let wifiNetworksRefreshing = false;
++let storageDetailsCache:
++  | {
++      value: CachedStorageDetails;
++      expiresAt: number;
++    }
++  | null = null;
++/** Last successfully collected storage details — persists beyond cache TTL for stale serving. */
++let storageDetailsLastKnown: CachedStorageDetails | null = null;
++/** True while a background (or first-ever) storage detail collection is in flight. */
++let storageDetailsRefreshing = false;
++let helperStatusUnavailableUntil = 0;
++let lastHelperStatusErrorLogAt = 0;
++/**
++ * In-flight snapshot collection, shared by all concurrent callers.
++ * collectSnapshot shells out to `sensors`, `nmcli` and `ip`; on a slow box it can
++ * outlast METRICS_PUBLISH_INTERVAL_MS, and without this guard every SSE tick
++ * started another one on top of the last until the subprocesses ate the CPU.
++ */
++let snapshotInFlight: Promise<SystemMetricsSnapshot> | null = null;
++
++function clampPercent(value: number) {
++  if (!Number.isFinite(value)) return 0;
++  return Math.max(0, Math.min(Number(value.toFixed(2)), 100));
++}
++
++function toNumber(value: number | bigint) {
++  if (typeof value === "bigint") {
++    return Number(value);
++  }
++  return value;
++}
++
++function toFiniteNumber(value: unknown) {
++  if (typeof value !== "number" || Number.isNaN(value) || !Number.isFinite(value)) {
++    return null;
++  }
++  return value;
++}
++
++function baseDeviceFromPartition(device: string) {
++  return device.replace(/p?\d+$/, "");
++}
++
++function deriveVolumeLabel(input: {
++  device: string;
++  mountPath: string;
++  mediaType: string | null;
++}) {
++  const mountName =
++    input.mountPath === "/"
++      ? "System"
++      : input.mountPath.startsWith("/DATA")
++        ? "Data"
++        : path.basename(input.mountPath) || "Volume";
++  const mediaSuffix = input.mediaType ? ` (${input.mediaType})` : "";
++  return `${input.device} - ${mountName}${mediaSuffix}`;
++}
++
++function inferRaidFromVolumes(
++  volumes: NonNullable<StorageMetrics["volumes"]>,
++): StorageMetrics["raid"] {
++  const zfsVolumes = volumes.filter((volume) =>
++    volume.filesystem?.toLowerCase().includes("zfs"),
++  );
++  if (zfsVolumes.length > 0) {
++    return {
++      name: "zpool",
++      type: "ZFS",
++      totalBytes: zfsVolumes.reduce((sum, volume) => sum + volume.totalBytes, 0),
++      redundancy: "Managed by ZFS",
++      status: "healthy",
++    };
++  }
++
++  const mdVolumes = volumes.filter((volume) => volume.device.startsWith("/dev/md"));
++  if (mdVolumes.length > 0) {
++    return {
++      name: path.basename(mdVolumes[0].device),
++      type: "Linux RAID",
++      totalBytes: mdVolumes.reduce((sum, volume) => sum + volume.totalBytes, 0),
++      redundancy: "Managed by mdadm",
++      status: "healthy",
++    };
++  }
++
++  return null;
++}
++
++function summarizeSmartHealth(
++  diskLayout: Awaited<ReturnType<typeof si.diskLayout>>,
++): StorageMetrics["smart"] {
++  if (diskLayout.length === 0) {
++    return null;
++  }
++
++  let healthyDisks = 0;
++  let failingDisks = 0;
++  const disks: SmartDiskInfo[] = [];
++
++  for (const disk of diskLayout) {
++    if (typeof disk.device !== "string" || disk.device.trim().length === 0) continue;
++
++    const rawStatus =
++      typeof disk.smartStatus === "string"
++        ? disk.smartStatus.trim().toLowerCase()
++        : "";
++
++    let diskStatus: SmartDiskInfo["status"];
++    if (
++      rawStatus.includes("fail") ||
++      rawStatus.includes("error") ||
++      rawStatus.includes("pred") ||
++      rawStatus.includes("bad")
++    ) {
++      diskStatus = "degraded";
++      failingDisks += 1;
++    } else if (
++      rawStatus.includes("ok") ||
++      rawStatus.includes("good") ||
++      rawStatus.includes("pass")
++    ) {
++      diskStatus = "healthy";
++      healthyDisks += 1;
++    } else {
++      diskStatus = "unknown";
++    }
++
++    const temperatureCelsius =
++      disk.temperature !== null &&
++      typeof disk.temperature === "number" &&
++      Number.isFinite(disk.temperature) &&
++      disk.temperature > 0
++        ? Math.round(disk.temperature)
++        : null;
++
++    const smartDataHours = disk.smartData?.power_on_time?.hours;
++    const powerOnHours =
++      typeof smartDataHours === "number" &&
++      Number.isFinite(smartDataHours) &&
++      smartDataHours >= 0
++        ? Math.round(smartDataHours)
++        : null;
++
++    const sizeBytes =
++      typeof disk.size === "number" && Number.isFinite(disk.size) && disk.size > 0
++        ? disk.size
++        : null;
++
++    disks.push({
++      device: disk.device.trim(),
++      name:
++        typeof disk.name === "string" && disk.name.trim().length > 0
++          ? disk.name.trim()
++          : null,
++      vendor:
++        typeof disk.vendor === "string" && disk.vendor.trim().length > 0
++          ? disk.vendor.trim()
++          : null,
++      type:
++        typeof disk.type === "string" && disk.type.trim().length > 0
++          ? disk.type.trim().toUpperCase()
++          : null,
++      sizeBytes,
++      status: diskStatus,
++      smartStatus:
++        typeof disk.smartStatus === "string" && disk.smartStatus.trim().length > 0
++          ? disk.smartStatus.trim()
++          : "Unknown",
++      temperatureCelsius,
++      powerOnHours,
++    });
++  }
++
++  if (disks.length === 0) {
++    return null;
++  }
++
++  const status =
++    failingDisks > 0 ? "degraded" : healthyDisks > 0 ? "healthy" : "unknown";
++
++  const message =
++    status === "degraded"
++      ? `${failingDisks} drive(s) reported potential SMART issues.`
++      : status === "healthy"
++        ? `All ${healthyDisks} SMART-capable drive(s) report healthy status.`
++        : "SMART status unavailable for detected drives.";
++
++  return {
++    status,
++    healthyDisks,
++    failingDisks,
++    checkedAt: new Date().toISOString(),
++    message,
++    disks,
++  };
++}
++
++function readStorageDetailsCache() {
++  if (!storageDetailsCache) return null;
++  if (storageDetailsCache.expiresAt <= Date.now()) {
++    storageDetailsCache = null;
++    return null;
++  }
++  return storageDetailsCache.value;
++}
++
++/**
++ * Execute the expensive storage detail collection (fsSize + diskLayout probes).
++ * Updates both the TTL cache and the persistent lastKnown value.
++ */
++async function executeStorageDetailCollection(): Promise<CachedStorageDetails> {
++  const [fsSizes, diskLayout] = await Promise.all([
++    withFallback("system.metrics.storage.fsSize", () => si.fsSize(), []),
++    withFallback("system.metrics.storage.diskLayout", () => si.diskLayout(), []),
++  ]);
++
++  const mediaTypeByDevice = new Map<string, string>();
++  for (const disk of diskLayout) {
++    if (typeof disk.device !== "string" || disk.device.trim().length === 0) continue;
++    const mediaType =
++      typeof disk.type === "string" && disk.type.trim().length > 0
++        ? disk.type.trim().toUpperCase()
++        : null;
++    if (!mediaType) continue;
++    mediaTypeByDevice.set(baseDeviceFromPartition(disk.device), mediaType);
++  }
++
++  // Track seen devices so we only include one entry per physical device
++  // (e.g. /dev/nvme0n1p2 mounted at both / and /boot should show only one).
++  const seenDevices = new Set<string>();
++
++  const volumes = fsSizes
++    .map((fsSize) => {
++      const totalBytesRaw = toFiniteNumber(fsSize.size);
++      if (totalBytesRaw === null || totalBytesRaw <= 0) {
++        return null;
++      }
++
++      const filesystem =
++        typeof fsSize.type === "string" && fsSize.type.trim().length > 0
++          ? fsSize.type.trim()
++          : null;
++
++      // Skip virtual / pseudo filesystems (Docker overlay layers, tmpfs, snap, etc.)
++      if (filesystem && VIRTUAL_FS_TYPES.has(filesystem.toLowerCase())) {
++        return null;
++      }
++
++      const totalBytes = Math.max(Math.round(totalBytesRaw), 0);
++      const usedBytesRaw = toFiniteNumber(fsSize.used);
++      const usedPercentRaw = toFiniteNumber(fsSize.use);
++      const inferredUsedBytes =
++        usedPercentRaw !== null
++          ? Math.round((totalBytes * clampPercent(usedPercentRaw)) / 100)
++          : 0;
++      const usedBytes =
++        usedBytesRaw !== null
++          ? Math.max(Math.round(usedBytesRaw), 0)
++          : Math.max(inferredUsedBytes, 0);
++      const usedPercent =
++        usedPercentRaw !== null
++          ? clampPercent(usedPercentRaw)
++          : totalBytes > 0
++            ? clampPercent((usedBytes / totalBytes) * 100)
++            : 0;
++
++      const mountPath =
++        typeof fsSize.mount === "string" && fsSize.mount.trim().length > 0
++          ? fsSize.mount
++          : "/";
++      const device =
++        typeof fsSize.fs === "string" && fsSize.fs.trim().length > 0
++          ? fsSize.fs
++          : mountPath;
++
++      // Deduplicate real block devices — keep only the first (most significant) mount point
++      const baseDevice = baseDeviceFromPartition(device);
++      if (baseDevice.startsWith("/dev/") && seenDevices.has(device)) {
++        return null;
++      }
++      if (baseDevice.startsWith("/dev/")) {
++        seenDevices.add(device);
++      }
++
++      const mediaType = mediaTypeByDevice.get(baseDevice) ?? null;
++
++      return {
++        id: `${device}:${mountPath}`,
++        label: deriveVolumeLabel({ device, mountPath, mediaType }),
++        mountPath,
++        device,
++        filesystem,
++        mediaType,
++        totalBytes,
++        usedBytes: Math.min(usedBytes, totalBytes),
++        usedPercent,
++      };
++    })
++    .filter((volume): volume is NonNullable<typeof volume> => volume !== null)
++    .sort((left, right) => right.usedBytes - left.usedBytes)
++    .slice(0, 8);
++
++  const details: CachedStorageDetails = {
++    volumes,
++    raid: inferRaidFromVolumes(volumes),
++    smart: summarizeSmartHealth(diskLayout),
++  };
++
++  storageDetailsCache = {
++    value: details,
++    expiresAt: Date.now() + STORAGE_DETAILS_CACHE_TTL_MS,
++  };
++  storageDetailsLastKnown = details;
++
++  return details;
++}
++
++/**
++ * Returns storage details using a stale-while-revalidate strategy:
++ *  - Fresh cache hit  → return immediately (no I/O).
++ *  - Stale but data exists → return last-known value instantly; kick off a
++ *    background refresh so the *next* call gets fresh data.
++ *  - First call ever → must await the probe (no prior data to serve).
++ *
++ * This prevents the 1-3 s fsSize/diskLayout probes from blocking every SSE push
++ * after the 60-second TTL expires.
++ */
++async function collectStorageDetailMetrics(): Promise<CachedStorageDetails> {
++  // 1) Fresh cache hit — no I/O needed.
++  const cached = readStorageDetailsCache();
++  if (cached) return cached;
++
++  // 2) We have a previously collected value. Serve it immediately and refresh
++  //    in the background so the next cache miss gets fresh data.
++  if (storageDetailsLastKnown !== null) {
++    if (!storageDetailsRefreshing) {
++      storageDetailsRefreshing = true;
++      void executeStorageDetailCollection()
++        .catch((error) => {
++          logServerAction({
++            level: "warn",
++            layer: "service",
++            action: "system.metrics.storage.background-refresh",
++            status: "error",
++            message: "Background storage detail refresh failed",
++            error,
++          });
++        })
++        .finally(() => {
++          storageDetailsRefreshing = false;
++        });
++    }
++    return storageDetailsLastKnown;
++  }
++
++  // 3) First call ever — must await synchronously (no stale value to serve).
++  storageDetailsRefreshing = true;
++  try {
++    return await executeStorageDetailCollection();
++  } finally {
++    storageDetailsRefreshing = false;
++  }
++}
++
++async function collectStorageMetrics() {
++  try {
++    const configuredRoot = serverEnv.FILES_ROOT;
++    const targetPath = path.isAbsolute(configuredRoot)
++      ? configuredRoot
++      : path.resolve(process.cwd(), configuredRoot);
++    const filesystemStats = await statfs(targetPath);
++
++    const blockSize = toNumber(filesystemStats.bsize);
++    const totalBlocks = toNumber(filesystemStats.blocks);
++    const availableBlocks = toNumber(filesystemStats.bavail);
++    const totalBytes = Math.max(Math.round(blockSize * totalBlocks), 0);
++    const availableBytes = Math.max(Math.round(blockSize * availableBlocks), 0);
++    const usedBytes = Math.max(totalBytes - availableBytes, 0);
++    const usedPercent = totalBytes > 0 ? (usedBytes / totalBytes) * 100 : 0;
++    const details = await collectStorageDetailMetrics();
++
++    return {
++      mountPath: targetPath,
++      totalBytes,
++      availableBytes,
++      usedBytes,
++      usedPercent: clampPercent(usedPercent),
++      ...details,
++    };
++  } catch (error) {
++    logServerAction({
++      level: "warn",
++      layer: "service",
++      action: "system.metrics.storage",
++      status: "error",
++      message: "Unable to collect storage metrics",
++      error,
++    });
++    return null;
++  }
++}
++
++function toNullableMetric(
++  value: number | undefined,
++  options?: {
++    precision?: number;
++    allowZero?: boolean;
++  },
++) {
++  if (typeof value !== "number" || Number.isNaN(value)) return null;
++
++  const allowZero = options?.allowZero ?? false;
++  if (!allowZero && value <= 0) return null;
++
++  const precision = options?.precision ?? 1;
++  return Number(value.toFixed(precision));
++}
++
++function toNullablePercent(value: number | undefined) {
++  if (typeof value !== "number" || Number.isNaN(value)) return null;
++  return Math.max(0, Math.min(Math.round(value), 100));
++}
++
++function toNullableText(value: string | undefined | null) {
++  if (typeof value !== "string") return null;
++  const normalized = value.trim();
++  return normalized.length > 0 ? normalized : null;
++}
++
++function toDesignToMaxCapacityPercent(
++  designedCapacityWh: number | null,
++  maxCapacityWh: number | null,
++) {
++  if (designedCapacityWh === null || maxCapacityWh === null) return null;
++  if (maxCapacityWh <= 0) return null;
++
++  return Number(((maxCapacityWh / designedCapacityWh) * 100).toFixed(1));
++}
++
++/**
++ * Returns cached WiFi networks immediately (or [] on first call) and
++ * triggers a background scan so the next call gets fresh data.
++ * This prevents the 5-8s WiFi scan from blocking the metrics snapshot.
++ */
++function getWifiNetworksStale(): Awaited<ReturnType<typeof si.wifiNetworks>> {
++  const now = Date.now();
++
++  if (wifiNetworksCache && wifiNetworksCache.expiresAt > now) {
++    return wifiNetworksCache.value;
++  }
++
++  if (!wifiNetworksRefreshing) {
++    wifiNetworksRefreshing = true;
++    void withFallback("system.metrics.wifiNetworks", () => si.wifiNetworks(), [])
++      .then((networks) => {
++        wifiNetworksCache = { value: networks, expiresAt: Date.now() + WIFI_NETWORKS_CACHE_TTL_MS };
++      })
++      .finally(() => {
++        wifiNetworksRefreshing = false;
++      });
++  }
++
++  return wifiNetworksCache?.value ?? [];
++}
++
++/** Download and upload rate of an interface since the previous snapshot; null on the first one. */
++async function readNetworkRate(iface: string | null) {
++  if (!iface) return null;
++  const counters = await readInterfaceCounters(iface);
++  return counters ? snapshotNetworkRates(iface, counters, Date.now()) : null;
++}
++
++async function withFallback<T>(
++  action: string,
++  run: () => Promise<T>,
++  fallback: T,
++) {
++  try {
++    return await run();
++  } catch (error) {
++    logServerAction({
++      level: "warn",
++      layer: "service",
++      action,
++      status: "error",
++      error,
++      message: "systeminformation probe failed; using fallback",
++    });
++    return fallback;
++  }
++}
++
++async function collectSnapshot(): Promise<SystemMetricsSnapshot> {
++  const [oneMinute, fiveMinute, fifteenMinute] = os.loadavg();
++  const cpuCores = os.cpus().length || 1;
++  const totalBytes = os.totalmem();
++  const freeBytes = os.freemem();
++  const usedBytes = Math.max(totalBytes - freeBytes, 0);
++  const defaultCpuPercent = Math.min((oneMinute / cpuCores) * 100, 100);
++
++  const [
++    cpuTemperature,
++    batteryData,
++    wifiConnections,
++    wifiNetworks,
++    defaultRouteIface,
++    storageMetrics,
++    diskCounters,
++  ] = await Promise.all([
++    getCpuTemperature(),
++    getBatteryTelemetry(),
++    getWifiConnections(),
++    Promise.resolve(getWifiNetworksStale()),
++    readDefaultRouteInterface(),
++    collectStorageMetrics(),
++    readDiskCounters(),
++  ]);
++  const cpuLoadPercent = snapshotCpuLoad(readCpuTimes());
++  const diskIo = totalMegabytesPerSecond(
++    diskCounters ? snapshotDiskRates(diskCounters, Date.now()) : new Map(),
++  );
++
++  const mainTemperature = toNullableMetric(cpuTemperature?.main);
++  const normalizedCoreTemps = (cpuTemperature?.cores ?? [])
++    .map((coreTemp) => toNullableMetric(coreTemp))
++    .filter((coreTemp): coreTemp is number => coreTemp !== null);
++  const maxTemperature = toNullableMetric(cpuTemperature?.max);
++
++  // Try to get WiFi status from NetworkManager D-Bus helper first (more reliable),
++  // but cache it to avoid querying DBus for every metrics stream frame.
++  const helperStatus = await resolveHelperStatusForMetrics();
++
++  const primaryWifiConnection =
++    wifiConnections.find(
++      (connection) =>
++        connection.iface.length > 0 || connection.ssid.trim().length > 0,
++    ) ?? null;
++  // The Wi-Fi interface when there is a Wi-Fi link, else the one carrying the default route.
++  const primaryIface = primaryWifiConnection?.iface || defaultRouteIface;
++  const primaryAddresses = primaryIface
++    ? readInterfaceAddresses(primaryIface)
++    : { ipv4: null, ipv6: null };
++
++  // Prefer D-Bus helper data for WiFi status (more reliable with NetworkManager)
++  const connectedSsid = helperStatus?.ssid?.trim() ?? primaryWifiConnection?.ssid.trim() ?? "";
++  const isWifiConnected = connectedSsid.length > 0;
++  // Ethernet: no SSID but the primary interface has an IPv4 address
++  const isEthernetConnected = !isWifiConnected && primaryAddresses.ipv4 !== null;
++  const preferredIface = helperStatus?.iface ?? primaryIface ?? null;
++  const networkRate = await readNetworkRate(preferredIface);
++  const designedCapacityWh = batteryData?.hasBattery
++    ? toNullableMetric(batteryData.designedCapacity ?? undefined, {
++        precision: 0,
++      })
++    : null;
++  const maxCapacityWh = batteryData?.hasBattery
++    ? toNullableMetric(batteryData.maxCapacity ?? undefined, {
++        precision: 0,
++      })
++    : null;
++  const availableNetworks = wifiNetworks
++    .filter((network) => network.ssid.trim().length > 0)
++    .sort((left, right) => (right.quality ?? 0) - (left.quality ?? 0))
++    .slice(0, 6)
++    .map((network) => ({
++      ssid: network.ssid.trim(),
++      channel: Number.isFinite(network.channel) ? network.channel : null,
++      qualityPercent: toNullablePercent(network.quality),
++      security:
++        network.security.length > 0
++          ? network.security.join(", ")
++          : network.rsnFlags.length > 0
++            ? network.rsnFlags.join(", ")
++            : null,
++    }));
++  return {
++    timestamp: new Date().toISOString(),
++    hostname: os.hostname(),
++    platform: `${os.platform()} ${os.release()}`,
++    kernelRelease: os.release(),
++    architecture: os.arch(),
++    uptimeSeconds: os.uptime(),
++    cpu: {
++      oneMinute,
++      fiveMinute,
++      fifteenMinute,
++      normalizedPercent: clampPercent(cpuLoadPercent ?? defaultCpuPercent),
++    },
++    memory: {
++      totalBytes,
++      freeBytes,
++      usedBytes,
++      usedPercent: totalBytes > 0 ? (usedBytes / totalBytes) * 100 : 0,
++    },
++    temperature: {
++      mainCelsius: mainTemperature,
++      maxCelsius: maxTemperature,
++      coresCelsius: normalizedCoreTemps,
++    },
++    diskIo,
++    battery: {
++      hasBattery: Boolean(batteryData?.hasBattery),
++      isCharging: Boolean(batteryData?.isCharging),
++      percent: batteryData?.hasBattery
++        ? toNullablePercent(batteryData.percent ?? undefined)
++        : null,
++      timeRemainingMinutes:
++        batteryData?.hasBattery &&
++        typeof batteryData.timeRemaining === "number" &&
++        batteryData.timeRemaining >= 0
++          ? Math.round(batteryData.timeRemaining)
++          : null,
++      acConnected:
++        typeof batteryData?.acConnected === "boolean"
++          ? batteryData.acConnected
++          : null,
++      manufacturer: batteryData?.hasBattery
++        ? toNullableText(batteryData?.manufacturer ?? undefined)
++        : null,
++      cycleCount:
++        batteryData?.hasBattery &&
++        typeof batteryData.cycleCount === "number" &&
++        Number.isFinite(batteryData.cycleCount) &&
++        batteryData.cycleCount >= 0
++          ? Math.round(batteryData.cycleCount)
++          : null,
++      designedCapacityWh,
++      maxCapacityWh,
++      designToMaxCapacityPercent: batteryData && "capacityRatioPercent" in batteryData
++        ? batteryData.capacityRatioPercent
++        : toDesignToMaxCapacityPercent(designedCapacityWh, maxCapacityWh),
++    },
++    storage: storageMetrics ?? undefined,
++    wifi: {
++      connected: helperStatus?.connected ?? (isWifiConnected || isEthernetConnected),
++      iface:
++        helperStatus?.iface ?? (primaryIface || null),
++      ssid: helperStatus?.ssid ?? (isWifiConnected ? connectedSsid : null),
++      bssid: primaryWifiConnection?.bssid || null,
++      signalPercent: helperStatus?.signalPercent ?? toNullablePercent(primaryWifiConnection?.quality),
++      txRateMbps: toNullableMetric(primaryWifiConnection?.txRate, {
++        precision: 1,
++        allowZero: true,
++      }),
++      downloadMbps: toNullableMetric(
++        networkRate ? (networkRate.rxBytesPerSec * 8) / 1_000_000 : undefined,
++        {
++          precision: 2,
++          allowZero: true,
++        },
++      ),
++      uploadMbps: toNullableMetric(
++        networkRate ? (networkRate.txBytesPerSec * 8) / 1_000_000 : undefined,
++        {
++          precision: 2,
++          allowZero: true,
++        },
++      ),
++      ipv4: helperStatus?.ipv4 ?? primaryAddresses.ipv4,
++      ipv6: primaryAddresses.ipv6,
++      availableNetworks,
++    },
++    process: {
++      pid: process.pid,
++      uptimeSeconds: process.uptime(),
++      nodeVersion: process.version,
++      runtime: isContainerRuntime() ? "docker" : "host",
++    },
++  };
++}
++
++export async function getSystemMetricsSnapshot(options?: {
++  bypassCache?: boolean;
++}) {
++  const startedAt = performance.now();
++
++  if (!options?.bypassCache) {
++    const cached = metricsCache.get("latest");
++    if (cached) {
++      logServerAction({
++        level: "debug",
++        layer: "service",
++        action: "system.metrics.snapshot",
++        status: "success",
++        durationMs: Number((performance.now() - startedAt).toFixed(2)),
++        meta: {
++          cache: "hit",
++        },
++      });
++      return cached;
++    }
++  }
++
++  const joinedInFlight = !options?.bypassCache && snapshotInFlight !== null;
++  let pending = snapshotInFlight;
++  if (!joinedInFlight || pending === null) {
++    const collection: Promise<SystemMetricsSnapshot> = collectSnapshot().finally(() => {
++      if (snapshotInFlight === collection) {
++        snapshotInFlight = null;
++      }
++    });
++    snapshotInFlight = collection;
++    pending = collection;
++  }
++
++  const snapshot = await pending;
++  metricsCache.set("latest", snapshot);
++
++  logServerAction({
++    level: "debug",
++    layer: "service",
++    action: "system.metrics.snapshot",
++    status: "success",
++    durationMs: Number((performance.now() - startedAt).toFixed(2)),
++    meta: {
++      cache: joinedInFlight ? "in-flight" : "miss",
++    },
++  });
++
++  return snapshot;
++}
++
++function readHelperStatusCache() {
++  if (!helperStatusCache) return null;
++  if (helperStatusCache.expiresAt <= Date.now()) {
++    helperStatusCache = null;
++    return null;
++  }
++
++  return helperStatusCache.value;
++}
++
++async function resolveHelperStatusForMetrics() {
++  const cached = readHelperStatusCache();
++  if (cached) {
++    return cached;
++  }
++
++  if (Date.now() < helperStatusUnavailableUntil) {
++    return null;
++  }
++
++  try {
++    const status = await getNetworkStatusFromHelper();
++    helperStatusCache = {
++      value: status,
++      expiresAt: Date.now() + HELPER_STATUS_CACHE_TTL_MS,
++    };
++    helperStatusUnavailableUntil = 0;
++    return status;
++  } catch (error) {
++    if (isNetworkHelperUnavailableError(error)) {
++      helperStatusUnavailableUntil = Date.now() + HELPER_STATUS_UNAVAILABLE_BACKOFF_MS;
++      return null;
++    }
++
++    const now = Date.now();
++    if (now - lastHelperStatusErrorLogAt >= HELPER_STATUS_ERROR_LOG_COOLDOWN_MS) {
++      lastHelperStatusErrorLogAt = now;
++      logServerAction({
++        level: "warn",
++        layer: "service",
++        action: "system.metrics.network.helper",
++        status: "error",
++        message: "Failed to get network status from D-Bus helper",
++        error,
++      });
++    }
++
++    return null;
++  }
++}
+diff --git a/lib/shared/contracts/server-info.ts b/lib/shared/contracts/server-info.ts
+index aeb207d..b99b6b5 100644
+--- a/lib/shared/contracts/server-info.ts
++++ b/lib/shared/contracts/server-info.ts
+@@ -11,6 +11,7 @@ export type ServerCpuInfo = {
+ };
+ 
+ export type ServerGpuController = {
++  sharedMemory?: boolean;
+   vendor: string | null;
+   model: string | null;
+   bus: string | null;
+@@ -90,6 +91,9 @@ export type ServerHardwareInfo = {
+   cpu: ServerCpuInfo;
+   memory: {
+     totalBytes: number;
++    installedBytes?: number | null;
++    reservedBytes?: number | null;
++    onBoard?: boolean;
+     slots: ServerMemorySlot[];
+   };
+   gpu: {
+diff --git a/lib/shared/contracts/system.ts b/lib/shared/contracts/system.ts
+index b5d3ac1..a9a39e5 100644
+--- a/lib/shared/contracts/system.ts
++++ b/lib/shared/contracts/system.ts
+@@ -1,270 +1,272 @@
+-export type CpuLoad = {
+-  oneMinute: number;
+-  fiveMinute: number;
+-  fifteenMinute: number;
+-  normalizedPercent: number;
+-};
+-
+-export type MemoryUsage = {
+-  totalBytes: number;
+-  freeBytes: number;
+-  usedBytes: number;
+-  usedPercent: number;
+-};
+-
+-export type TemperatureMetrics = {
+-  mainCelsius: number | null;
+-  maxCelsius: number | null;
+-  coresCelsius: number[];
+-};
+-
+-export type BatteryMetrics = {
+-  hasBattery: boolean;
+-  isCharging: boolean;
+-  percent: number | null;
+-  timeRemainingMinutes: number | null;
+-  acConnected: boolean | null;
+-  manufacturer: string | null;
+-  cycleCount: number | null;
+-  designedCapacityWh: number | null;
+-  maxCapacityWh: number | null;
+-  designToMaxCapacityPercent: number | null;
+-};
+-
+-export type StorageMetrics = {
+-  mountPath: string;
+-  totalBytes: number;
+-  availableBytes: number;
+-  usedBytes: number;
+-  usedPercent: number;
+-  volumes?: StorageVolumeMetrics[];
+-  raid?: RaidMetrics | null;
+-  smart?: SmartHealthMetrics | null;
+-};
+-
+-export type StorageVolumeMetrics = {
+-  id: string;
+-  label: string;
+-  mountPath: string;
+-  device: string;
+-  filesystem: string | null;
+-  mediaType: string | null;
+-  totalBytes: number;
+-  usedBytes: number;
+-  usedPercent: number;
+-};
+-
+-export type RaidMetrics = {
+-  name: string;
+-  type: string;
+-  totalBytes: number | null;
+-  redundancy: string | null;
+-  status: "healthy" | "degraded" | "unknown";
+-};
+-
+-export type SmartDiskInfo = {
+-  device: string;
+-  name: string | null;
+-  vendor: string | null;
+-  type: string | null;
+-  sizeBytes: number | null;
+-  status: "healthy" | "degraded" | "unknown";
+-  smartStatus: string;
+-  temperatureCelsius: number | null;
+-  powerOnHours: number | null;
+-};
+-
+-export type SmartHealthMetrics = {
+-  status: "healthy" | "degraded" | "unknown";
+-  healthyDisks: number;
+-  failingDisks: number;
+-  checkedAt: string;
+-  message: string;
+-  disks: SmartDiskInfo[];
+-};
+-
+-export type WifiAccessPoint = {
+-  ssid: string;
+-  channel: number | null;
+-  qualityPercent: number | null;
+-  security: string | null;
+-};
+-
+-export type WifiMetrics = {
+-  connected: boolean;
+-  iface: string | null;
+-  ssid: string | null;
+-  bssid: string | null;
+-  signalPercent: number | null;
+-  txRateMbps: number | null;
+-  downloadMbps: number | null;
+-  uploadMbps: number | null;
+-  ipv4: string | null;
+-  ipv6: string | null;
+-  availableNetworks: WifiAccessPoint[];
+-};
+-
+-export const SYSTEM_TIMEZONE_OPTIONS = [
+-  "UTC",
+-  "America/New_York",
+-  "America/Chicago",
+-  "America/Denver",
+-  "America/Los_Angeles",
+-  "Europe/London",
+-  "Europe/Paris",
+-  "Europe/Berlin",
+-  "Europe/Madrid",
+-  "Europe/Rome",
+-  "Asia/Dubai",
+-  "Asia/Kolkata",
+-  "Asia/Shanghai",
+-  "Asia/Singapore",
+-  "Asia/Tokyo",
+-  "Australia/Sydney",
+-] as const;
+-
+-export const SYSTEM_BACKUP_DAY_OPTIONS = [
+-  "monday",
+-  "tuesday",
+-  "wednesday",
+-  "thursday",
+-  "friday",
+-  "saturday",
+-  "sunday",
+-] as const;
+-
+-export const SYSTEM_BACKUP_FREQUENCY_OPTIONS = ["daily", "weekly"] as const;
+-export const SYSTEM_SECURITY_POLICY_OPTIONS = ["allow", "deny", "reject"] as const;
+-
+-export const SYSTEM_SECURITY_MAX_RETRIES_MIN = 1;
+-export const SYSTEM_SECURITY_MAX_RETRIES_MAX = 20;
+-export const SYSTEM_SECURITY_BAN_DURATION_MIN = 60;
+-export const SYSTEM_SECURITY_BAN_DURATION_MAX = 2_592_000;
+-
+-export type SystemBackupFrequency = (typeof SYSTEM_BACKUP_FREQUENCY_OPTIONS)[number];
+-export type SystemBackupDayOfWeek = (typeof SYSTEM_BACKUP_DAY_OPTIONS)[number];
+-export type SystemSecurityPolicy = (typeof SYSTEM_SECURITY_POLICY_OPTIONS)[number];
+-
+-export type SystemPreferences = {
+-  hostname: string;
+-  timezone: string;
+-};
+-
+-export type SystemUpdateStatus = {
+-  currentVersion: string;
+-  latestVersion: string | null;
+-  updateAvailable: boolean;
+-  checkedAt: string | null;
+-  /** False in the Docker image, where updating means pulling a new image. */
+-  canSelfUpdate: boolean;
+-};
+-
+-export type SystemUpdateApplyAcceptedResponse = {
+-  action: "update";
+-  accepted: true;
+-};
+-
+-export type SystemSecuritySettings = {
+-  firewallEnabled: boolean;
+-  firewallIncomingPolicy: SystemSecurityPolicy;
+-  firewallOutgoingPolicy: SystemSecurityPolicy;
+-  fail2banEnabled: boolean;
+-  fail2banMaxRetries: number;
+-  fail2banBanDurationSeconds: number;
+-};
+-
+-export type SystemBackupSettings = {
+-  enabled: boolean;
+-  frequency: SystemBackupFrequency;
+-  dayOfWeek: SystemBackupDayOfWeek;
+-  time: string;
+-  retentionCount: number;
+-};
+-
+-export type SystemBackupSummary = {
+-  id: string;
+-  createdAt: string;
+-  sizeBytes: number;
+-  appVersion: string;
+-  hostname: string;
+-  backupPath: string;
+-  dbDumpIncluded: boolean;
+-  dataRootIncluded: boolean;
+-  stacksRootIncluded: boolean;
+-  storeConfigIncluded: boolean;
+-  status: "completed" | "failed";
+-};
+-
+-export type SystemBackupListResponse = {
+-  settings: SystemBackupSettings;
+-  backups: SystemBackupSummary[];
+-  backupRoot: string;
+-};
+-
+-export type SystemRestoreAcceptedResponse = {
+-  action: "restore";
+-  accepted: true;
+-  backupId: string;
+-};
+-
+-export type MetricsHistoryRange = "15m" | "1h" | "24h";
+-
+-/** One sample of the Monitor's history charts; null when the host has no reading. */
+-export type MetricsHistoryPoint = {
+-  /** Unix time in milliseconds. */
+-  t: number;
+-  cpuPercent: number | null;
+-  memoryPercent: number | null;
+-  temperatureCelsius: number | null;
+-  downloadMbps: number | null;
+-  uploadMbps: number | null;
+-  /** Read and written by all disks, in MB/s. */
+-  diskReadMBps: number | null;
+-  diskWriteMBps: number | null;
+-};
+-
+-export type MetricsHistory = {
+-  range: MetricsHistoryRange;
+-  /** Spacing between points: 5 s for 15m and 1h, 60 s (averages) for 24h. */
+-  intervalSeconds: number;
+-  points: MetricsHistoryPoint[];
+-};
+-
+-export type SystemMetricsSnapshot = {
+-  timestamp: string;
+-  hostname: string;
+-  platform: string;
+-  architecture: string;
+-  uptimeSeconds: number;
+-  cpu: CpuLoad;
+-  memory: MemoryUsage;
+-  temperature: TemperatureMetrics;
+-  /** All disks together, in MB/s; null until two readings exist or off Linux. */
+-  diskIo?: { readMBps: number | null; writeMBps: number | null };
+-  battery: BatteryMetrics;
+-  storage?: StorageMetrics;
+-  wifi: WifiMetrics;
+-  process: {
+-    pid: number;
+-    uptimeSeconds: number;
+-    nodeVersion: string;
+-    // How Homeio runs, so the desktop can name the right restart command once
+-    // the server stops answering. Missing from servers older than 1.10.
+-    runtime?: "docker" | "host";
+-  };
+-};
+-
+-export type SystemPowerAction = "reboot" | "shutdown" | "factory-reset" | "restore" | "update";
+-
+-// Sent to every open desktop when one session starts an action that takes
+-// Homeio down, so they all switch to the recovery screen instead of just
+-// losing the connection.
+-export type SystemPowerActionEvent = {
+-  action: SystemPowerAction;
+-  startedAt: string;
+-};
+-
+-export type SystemStreamEvent = {
+-  type: "metrics.updated" | "heartbeat" | "system.power-action";
+-  data: SystemMetricsSnapshot | { timestamp: string } | SystemPowerActionEvent;
+-};
++export type CpuLoad = {
++  oneMinute: number;
++  fiveMinute: number;
++  fifteenMinute: number;
++  normalizedPercent: number;
++};
++
++export type MemoryUsage = {
++  totalBytes: number;
++  freeBytes: number;
++  usedBytes: number;
++  usedPercent: number;
++};
++
++export type TemperatureMetrics = {
++  mainCelsius: number | null;
++  maxCelsius: number | null;
++  coresCelsius: number[];
++};
++
++export type BatteryMetrics = {
++  hasBattery: boolean;
++  isCharging: boolean;
++  percent: number | null;
++  timeRemainingMinutes: number | null;
++  acConnected: boolean | null;
++  manufacturer: string | null;
++  cycleCount: number | null;
++  designedCapacityWh: number | null;
++  maxCapacityWh: number | null;
++  designToMaxCapacityPercent: number | null;
++};
++
++export type StorageMetrics = {
++  mountPath: string;
++  totalBytes: number;
++  availableBytes: number;
++  usedBytes: number;
++  usedPercent: number;
++  volumes?: StorageVolumeMetrics[];
++  raid?: RaidMetrics | null;
++  smart?: SmartHealthMetrics | null;
++};
++
++export type StorageVolumeMetrics = {
++  id: string;
++  label: string;
++  mountPath: string;
++  device: string;
++  filesystem: string | null;
++  mediaType: string | null;
++  totalBytes: number;
++  usedBytes: number;
++  usedPercent: number;
++};
++
++export type RaidMetrics = {
++  name: string;
++  type: string;
++  totalBytes: number | null;
++  redundancy: string | null;
++  status: "healthy" | "degraded" | "unknown";
++};
++
++export type SmartDiskInfo = {
++  device: string;
++  name: string | null;
++  vendor: string | null;
++  type: string | null;
++  sizeBytes: number | null;
++  status: "healthy" | "degraded" | "unknown";
++  smartStatus: string;
++  temperatureCelsius: number | null;
++  powerOnHours: number | null;
++};
++
++export type SmartHealthMetrics = {
++  status: "healthy" | "degraded" | "unknown";
++  healthyDisks: number;
++  failingDisks: number;
++  checkedAt: string;
++  message: string;
++  disks: SmartDiskInfo[];
++};
++
++export type WifiAccessPoint = {
++  ssid: string;
++  channel: number | null;
++  qualityPercent: number | null;
++  security: string | null;
++};
++
++export type WifiMetrics = {
++  connected: boolean;
++  iface: string | null;
++  ssid: string | null;
++  bssid: string | null;
++  signalPercent: number | null;
++  txRateMbps: number | null;
++  downloadMbps: number | null;
++  uploadMbps: number | null;
++  ipv4: string | null;
++  ipv6: string | null;
++  availableNetworks: WifiAccessPoint[];
++};
++
++export const SYSTEM_TIMEZONE_OPTIONS = [
++  "UTC",
++  "America/New_York",
++  "America/Chicago",
++  "America/Denver",
++  "America/Los_Angeles",
++  "Europe/London",
++  "Europe/Paris",
++  "Europe/Berlin",
++  "Europe/Madrid",
++  "Europe/Rome",
++  "Asia/Dubai",
++  "Asia/Kolkata",
++  "Asia/Shanghai",
++  "Asia/Singapore",
++  "Asia/Tokyo",
++  "Australia/Sydney",
++] as const;
++
++export const SYSTEM_BACKUP_DAY_OPTIONS = [
++  "monday",
++  "tuesday",
++  "wednesday",
++  "thursday",
++  "friday",
++  "saturday",
++  "sunday",
++] as const;
++
++export const SYSTEM_BACKUP_FREQUENCY_OPTIONS = ["daily", "weekly"] as const;
++export const SYSTEM_SECURITY_POLICY_OPTIONS = ["allow", "deny", "reject"] as const;
++
++export const SYSTEM_SECURITY_MAX_RETRIES_MIN = 1;
++export const SYSTEM_SECURITY_MAX_RETRIES_MAX = 20;
++export const SYSTEM_SECURITY_BAN_DURATION_MIN = 60;
++export const SYSTEM_SECURITY_BAN_DURATION_MAX = 2_592_000;
++
++export type SystemBackupFrequency = (typeof SYSTEM_BACKUP_FREQUENCY_OPTIONS)[number];
++export type SystemBackupDayOfWeek = (typeof SYSTEM_BACKUP_DAY_OPTIONS)[number];
++export type SystemSecurityPolicy = (typeof SYSTEM_SECURITY_POLICY_OPTIONS)[number];
++
++export type SystemPreferences = {
++  hostname: string;
++  timezone: string;
++};
++
++export type SystemUpdateStatus = {
++  currentVersion: string;
++  latestVersion: string | null;
++  updateAvailable: boolean;
++  checkedAt: string | null;
++  /** False in the Docker image, where updating means pulling a new image. */
++  canSelfUpdate: boolean;
++};
++
++export type SystemUpdateApplyAcceptedResponse = {
++  action: "update";
++  accepted: true;
++};
++
++export type SystemSecuritySettings = {
++  firewallEnabled: boolean;
++  firewallIncomingPolicy: SystemSecurityPolicy;
++  firewallOutgoingPolicy: SystemSecurityPolicy;
++  fail2banEnabled: boolean;
++  fail2banMaxRetries: number;
++  fail2banBanDurationSeconds: number;
++};
++
++export type SystemBackupSettings = {
++  enabled: boolean;
++  frequency: SystemBackupFrequency;
++  dayOfWeek: SystemBackupDayOfWeek;
++  time: string;
++  retentionCount: number;
++};
++
++export type SystemBackupSummary = {
++  id: string;
++  createdAt: string;
++  sizeBytes: number;
++  appVersion: string;
++  hostname: string;
++  backupPath: string;
++  dbDumpIncluded: boolean;
++  dataRootIncluded: boolean;
++  stacksRootIncluded: boolean;
++  storeConfigIncluded: boolean;
++  status: "completed" | "failed";
++};
++
++export type SystemBackupListResponse = {
++  settings: SystemBackupSettings;
++  backups: SystemBackupSummary[];
++  backupRoot: string;
++};
++
++export type SystemRestoreAcceptedResponse = {
++  action: "restore";
++  accepted: true;
++  backupId: string;
++};
++
++export type MetricsHistoryRange = "15m" | "1h" | "24h";
++
++/** One sample of the Monitor's history charts; null when the host has no reading. */
++export type MetricsHistoryPoint = {
++  /** Unix time in milliseconds. */
++  t: number;
++  cpuPercent: number | null;
++  memoryPercent: number | null;
++  temperatureCelsius: number | null;
++  downloadMbps: number | null;
++  uploadMbps: number | null;
++  /** Read and written by all disks, in MB/s. */
++  diskReadMBps: number | null;
++  diskWriteMBps: number | null;
++};
++
++export type MetricsHistory = {
++  range: MetricsHistoryRange;
++  /** Spacing between points: 5 s for 15m and 1h, 60 s (averages) for 24h. */
++  intervalSeconds: number;
++  points: MetricsHistoryPoint[];
++};
++
++export type SystemMetricsSnapshot = {
++  timestamp: string;
++  hostname: string;
++  platform: string;
++  /** Operating-system kernel release, separate from the Node.js runtime. */
++  kernelRelease?: string;
++  architecture: string;
++  uptimeSeconds: number;
++  cpu: CpuLoad;
++  memory: MemoryUsage;
++  temperature: TemperatureMetrics;
++  /** All disks together, in MB/s; null until two readings exist or off Linux. */
++  diskIo?: { readMBps: number | null; writeMBps: number | null };
++  battery: BatteryMetrics;
++  storage?: StorageMetrics;
++  wifi: WifiMetrics;
++  process: {
++    pid: number;
++    uptimeSeconds: number;
++    nodeVersion: string;
++    // How Homeio runs, so the desktop can name the right restart command once
++    // the server stops answering. Missing from servers older than 1.10.
++    runtime?: "docker" | "host";
++  };
++};
++
++export type SystemPowerAction = "reboot" | "shutdown" | "factory-reset" | "restore" | "update";
++
++// Sent to every open desktop when one session starts an action that takes
++// Homeio down, so they all switch to the recovery screen instead of just
++// losing the connection.
++export type SystemPowerActionEvent = {
++  action: SystemPowerAction;
++  startedAt: string;
++};
++
++export type SystemStreamEvent = {
++  type: "metrics.updated" | "heartbeat" | "system.power-action";
++  data: SystemMetricsSnapshot | { timestamp: string } | SystemPowerActionEvent;
++};
+diff --git a/modules/apps/components/app-grid-content.tsx b/modules/apps/components/app-grid-content.tsx
+index f6c782b..beccaf0 100644
+--- a/modules/apps/components/app-grid-content.tsx
++++ b/modules/apps/components/app-grid-content.tsx
+@@ -1,225 +1,246 @@
+-"use client";
+-
+-import { getStoreOperationActionLabel } from "@/lib/shared/store-operations";
+-import {
+-  getAppVisualState,
+-  type ActiveAppOperation,
+-  type AppItem,
+-} from "@/modules/apps/components/app-grid-presenters";
+-import { Loader2 } from "@/components/icons/platform-icons";
+-import { Skeleton } from "@/components/ui/skeleton";
+-import { useState, type MouseEvent } from "react";
+-
+-type AppGridContentProps = {
+-  activeAppId: string | null;
+-  activeOperationsCount: number;
+-  animationsEnabled: boolean;
+-  apps: AppItem[];
+-  iconSize: "small" | "medium" | "large";
+-  isAppsError: boolean;
+-  isAppsLoading: boolean;
+-  onAppContextMenu: (event: MouseEvent, app: AppItem) => void;
+-  onOpenApp: (app: AppItem) => void;
+-  primaryOperation: ActiveAppOperation | null;
+-};
+-
+-export function AppGridContent({
+-  activeAppId,
+-  activeOperationsCount,
+-  animationsEnabled,
+-  apps,
+-  iconSize,
+-  isAppsError,
+-  isAppsLoading,
+-  onAppContextMenu,
+-  onOpenApp,
+-  primaryOperation,
+-}: AppGridContentProps) {
+-  const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
+-  const iconContainerClass =
+-    iconSize === "small"
+-      ? "size-12 rounded-xl"
+-      : iconSize === "large"
+-        ? "size-16 rounded-3xl"
+-        : "size-14 rounded-2xl";
+-  const iconGlyphClass =
+-    iconSize === "small"
+-      ? "size-6"
+-      : iconSize === "large"
+-        ? "size-8"
+-        : "size-7";
+-
+-  return (
+-    <>
+-      {primaryOperation ? (
+-        <div
+-          className="fixed bottom-[5.75rem] left-1/2 z-[150] -translate-x-1/2 w-[min(92vw,22rem)] overflow-hidden rounded-[var(--system-radius-control)] border border-glass-border/50 bg-popover/90 shadow-[0_8px_32px_rgba(0,0,0,0.28)] backdrop-blur-2xl animate-in fade-in slide-in-from-bottom-2 duration-200"
+-          role="status"
+-          aria-live="polite"
+-        >
+-          <div className="flex items-center gap-3 px-4 py-3">
+-            <span className="size-1.5 shrink-0 rounded-full bg-primary shadow-[0_0_8px_rgba(var(--primary),0.6)] animate-pulse" />
+-            <div className="min-w-0 flex-1">
+-              <p className="truncate text-xs font-medium text-foreground">
+-                {getStoreOperationActionLabel(primaryOperation.action)}{" "}
+-                <span className="text-foreground/60">{primaryOperation.appName}</span>
+-              </p>
+-            </div>
+-            <span className="shrink-0 tabular-nums text-2xs text-muted-foreground/60">
+-              {activeOperationsCount > 1
+-                ? `+${activeOperationsCount - 1} more`
+-                : `${primaryOperation.progressPercent}%`}
+-            </span>
+-          </div>
+-          <div className="h-px w-full bg-glass-border/30">
+-            <div
+-              className="h-full bg-primary/60 transition-all duration-500"
+-              style={{ width: `${Math.max(2, primaryOperation.progressPercent)}%` }}
+-            />
+-          </div>
+-        </div>
+-      ) : null}
+-
+-      {isAppsLoading && apps.length === 0 ? (
+-        <div className="mt-24" role="status" aria-live="polite">
+-          <div className="mx-auto flex max-w-xs flex-col items-center text-center">
+-            <div className="relative h-1 w-48 overflow-hidden rounded-full bg-glass-border/30">
+-              <div className="absolute inset-0 animate-grid-scan rounded-full bg-gradient-to-r from-transparent via-primary/60 to-transparent" />
+-            </div>
+-            <p className="mt-4 text-2xs uppercase tracking-[0.2em] font-mono text-muted-foreground">
+-              Syncing containers
+-            </p>
+-          </div>
+-          {/* Skeleton placeholder icons that match the real grid layout */}
+-          <div
+-            aria-hidden="true"
+-            className="mt-8 grid grid-cols-[repeat(4,minmax(0,5.5rem))] justify-center gap-x-1 gap-y-6 opacity-40 sm:grid-cols-[repeat(5,minmax(0,5.5rem))] md:grid-cols-[repeat(6,minmax(0,5.5rem))] lg:grid-cols-[repeat(8,minmax(0,5.5rem))] xl:grid-cols-[repeat(10,minmax(0,5.5rem))]"
+-          >
+-            {Array.from({ length: 20 }).map((_, i) => (
+-              <div key={i} className="flex flex-col items-center gap-2 p-2">
+-                <Skeleton className={`${iconContainerClass} shrink-0`} />
+-                <Skeleton className="h-2.5 w-12 rounded" />
+-              </div>
+-            ))}
+-          </div>
+-        </div>
+-      ) : isAppsError && apps.length === 0 ? (
+-        <div className="mt-24 text-center">
+-          <p className="text-2xs uppercase tracking-[0.2em] font-mono text-status-red">
+-            Connection failed
+-          </p>
+-        </div>
+-      ) : apps.length === 0 ? (
+-        <div className="mt-24 min-h-[12rem]" aria-hidden="true" />
+-      ) : (
+-        <div className="mt-24 grid grid-cols-[repeat(4,minmax(0,5.5rem))] justify-center gap-x-1 gap-y-6 sm:grid-cols-[repeat(5,minmax(0,5.5rem))] md:grid-cols-[repeat(6,minmax(0,5.5rem))] lg:grid-cols-[repeat(8,minmax(0,5.5rem))] xl:grid-cols-[repeat(10,minmax(0,5.5rem))]">
+-          {apps.map((app) => {
+-            const visualState = getAppVisualState(app);
+-            const BadgeIcon = visualState.badgeIcon;
+-
+-            return (
+-              <button
+-                key={app.id}
+-                onClick={() => onOpenApp(app)}
+-                onContextMenu={(event) => onAppContextMenu(event, app)}
+-                className={`group flex flex-col items-center gap-2 rounded-xl p-2 cursor-pointer ${
+-                  activeAppId === app.id
+-                    ? "bg-primary/15 ring-1 ring-primary/40"
+-                    : "hover:bg-foreground/5"
+-                } ${animationsEnabled ? "transition-all duration-200" : ""} ${
+-                  animationsEnabled ? "group-active:scale-95" : ""
+-                }`}
+-                aria-label={`Open ${app.name}`}
+-                data-app-status={app.status}
+-                title={visualState.title}
+-              >
+-                <div className="relative">
+-                  <div
+-                    className={`${iconContainerClass} relative flex items-center justify-center overflow-hidden border grain-overlay ${visualState.ringClass} ${!app.logoUrl ? `${app.bgColor} ${app.color}` : "bg-white/90"} shadow-lg shadow-black/20 ${
+-                      animationsEnabled
+-                        ? `transition-transform duration-200 group-hover:scale-110`
+-                        : ""
+-                    }`}
+-                    style={{ transform: "translateZ(0)" }}
+-                  >
+-                    {app.logoUrl ? (
+-                      <>
+-                        {!loadedImages.has(app.logoUrl) ? (
+-                          <div className="absolute inset-0 flex items-center justify-center">
+-                            <div className={`${iconGlyphClass} animate-pulse`}>
+-                              <app.icon className="h-full w-full opacity-30" />
+-                            </div>
+-                          </div>
+-                        ) : null}
+-                        {/* eslint-disable-next-line @next/next/no-img-element */}
+-                        <img
+-                          src={app.logoUrl}
+-                          alt={`${app.name} logo`}
+-                          className={`absolute inset-0 h-full w-full object-contain p-1.5 ${visualState.imageClass}`}
+-                          loading="lazy"
+-                          decoding="async"
+-                          onLoad={() => {
+-                            setLoadedImages((previous) =>
+-                              new Set(previous).add(app.logoUrl!),
+-                            );
+-                          }}
+-                          onError={(event) => {
+-                            const img = event.currentTarget;
+-                            const container = img.parentElement;
+-                            if (!container) return;
+-                            img.style.display = "none";
+-                            container.classList.remove("bg-white/90");
+-                            container.classList.add(app.bgColor, app.color);
+-                            const fallback = container.querySelector(
+-                              "[data-fallback-icon]",
+-                            );
+-                            if (fallback instanceof HTMLElement) {
+-                              fallback.style.display = "block";
+-                            }
+-                          }}
+-                        />
+-                        <app.icon
+-                          className={`${iconGlyphClass} hidden ${visualState.imageClass}`}
+-                          data-fallback-icon
+-                        />
+-                      </>
+-                    ) : (
+-                      <app.icon
+-                        className={`${iconGlyphClass} ${visualState.imageClass}`}
+-                      />
+-                    )}
+-                  </div>
+-                  {BadgeIcon ? (
+-                    <span className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
+-                      <BadgeIcon
+-                        className={`size-7 drop-shadow-[0_1px_3px_rgba(0,0,0,0.7)] ${visualState.badgeClass} ${
+-                          animationsEnabled ? visualState.badgeIconClass : ""
+-                        }`}
+-                      />
+-                    </span>
+-                  ) : null}
+-                  {app.updateAvailable && app.status === "running" ? (
+-                    <span
+-                      className="pointer-events-none absolute -top-0.5 -right-0.5 size-2.5 rounded-full border border-background bg-primary"
+-                      title="Update available"
+-                    />
+-                  ) : null}
+-                </div>
+-
+-                <span
+-                  className={`max-w-[4.5rem] truncate text-center text-2xs font-medium leading-tight tracking-tight text-foreground/80 ${
+-                    animationsEnabled
+-                      ? "transition-colors group-hover:text-foreground"
+-                      : ""
+-                  }`}
+-                >
+-                  {app.name}
+-                </span>
+-              </button>
+-            );
+-          })}
+-        </div>
+-      )}
+-    </>
+-  );
+-}
++"use client";
++
++import { getStoreOperationActionLabel } from "@/lib/shared/store-operations";
++import {
++  getAppVisualState,
++  type ActiveAppOperation,
++  type AppItem,
++} from "@/modules/apps/components/app-grid-presenters";
++import { Loader2 } from "@/components/icons/platform-icons";
++import { Skeleton } from "@/components/ui/skeleton";
++import { useState, type MouseEvent } from "react";
++import { SteamShortcut } from "./steam-shortcut";
++
++type AppGridContentProps = {
++  activeAppId: string | null;
++  activeOperationsCount: number;
++  animationsEnabled: boolean;
++  apps: AppItem[];
++  iconSize: "small" | "medium" | "large";
++  isAppsError: boolean;
++  isAppsLoading: boolean;
++  onAppContextMenu: (event: MouseEvent, app: AppItem) => void;
++  onOpenApp: (app: AppItem) => void;
++  primaryOperation: ActiveAppOperation | null;
++};
++
++export function AppGridContent({
++  activeAppId,
++  activeOperationsCount,
++  animationsEnabled,
++  apps,
++  iconSize,
++  isAppsError,
++  isAppsLoading,
++  onAppContextMenu,
++  onOpenApp,
++  primaryOperation,
++}: AppGridContentProps) {
++  const [loadedImages, setLoadedImages] = useState<Set<string>>(new Set());
++  const iconContainerClass =
++    iconSize === "small"
++      ? "size-12 rounded-xl"
++      : iconSize === "large"
++        ? "size-16 rounded-3xl"
++        : "size-14 rounded-2xl";
++  const iconGlyphClass =
++    iconSize === "small"
++      ? "size-6"
++      : iconSize === "large"
++        ? "size-8"
++        : "size-7";
++
++  return (
++    <>
++      {primaryOperation ? (
++        <div
++          className="fixed bottom-[5.75rem] left-1/2 z-[150] -translate-x-1/2 w-[min(92vw,22rem)] overflow-hidden rounded-[var(--system-radius-control)] border border-glass-border/50 bg-popover/90 shadow-[0_8px_32px_rgba(0,0,0,0.28)] backdrop-blur-2xl animate-in fade-in slide-in-from-bottom-2 duration-200"
++          role="status"
++          aria-live="polite"
++        >
++          <div className="flex items-center gap-3 px-4 py-3">
++            <span className="size-1.5 shrink-0 rounded-full bg-primary shadow-[0_0_8px_rgba(var(--primary),0.6)] animate-pulse" />
++            <div className="min-w-0 flex-1">
++              <p className="truncate text-xs font-medium text-foreground">
++                {getStoreOperationActionLabel(primaryOperation.action)}{" "}
++                <span className="text-foreground/60">{primaryOperation.appName}</span>
++              </p>
++            </div>
++            <span className="shrink-0 tabular-nums text-2xs text-muted-foreground/60">
++              {activeOperationsCount > 1
++                ? `+${activeOperationsCount - 1} more`
++                : `${primaryOperation.progressPercent}%`}
++            </span>
++          </div>
++          <div className="h-px w-full bg-glass-border/30">
++            <div
++              className="h-full bg-primary/60 transition-all duration-500"
++              style={{ width: `${Math.max(2, primaryOperation.progressPercent)}%` }}
++            />
++          </div>
++        </div>
++      ) : null}
++
++      {isAppsLoading && apps.length === 0 ? (
++        <div className="mt-24" role="status" aria-live="polite">
++          <div className="mx-auto flex max-w-xs flex-col items-center text-center">
++            <div className="relative h-1 w-48 overflow-hidden rounded-full bg-glass-border/30">
++              <div className="absolute inset-0 animate-grid-scan rounded-full bg-gradient-to-r from-transparent via-primary/60 to-transparent" />
++            </div>
++            <p className="mt-4 text-2xs uppercase tracking-[0.2em] font-mono text-muted-foreground">
++              Syncing containers
++            </p>
++          </div>
++          {/* Skeleton placeholder icons that match the real grid layout */}
++          <div
++            aria-hidden="true"
++            className="mt-8 grid grid-cols-[repeat(4,minmax(0,5.5rem))] justify-center gap-x-1 gap-y-6 opacity-40 sm:grid-cols-[repeat(5,minmax(0,5.5rem))] md:grid-cols-[repeat(6,minmax(0,5.5rem))] lg:grid-cols-[repeat(8,minmax(0,5.5rem))] xl:grid-cols-[repeat(10,minmax(0,5.5rem))]"
++          >
++            {Array.from({ length: 20 }).map((_, i) => (
++              <div key={i} className="flex flex-col items-center gap-2 p-2">
++                <Skeleton className={`${iconContainerClass} shrink-0`} />
++                <Skeleton className="h-2.5 w-12 rounded" />
++              </div>
++            ))}
++          </div>
++        </div>
++      ) : isAppsError && apps.length === 0 ? (
++        <div className="mt-24 text-center">
++          <p className="text-2xs uppercase tracking-[0.2em] font-mono text-status-red">
++            Connection failed
++          </p>
++        </div>
++      ) : apps.length === 0 ? (
++        <div className="mt-24 min-h-[12rem]" aria-hidden="true" />
++      ) : (
++        <div className="mt-24 grid grid-cols-[repeat(4,minmax(0,5.5rem))] justify-center gap-x-1 gap-y-6 sm:grid-cols-[repeat(5,minmax(0,5.5rem))] md:grid-cols-[repeat(6,minmax(0,5.5rem))] lg:grid-cols-[repeat(8,minmax(0,5.5rem))] xl:grid-cols-[repeat(10,minmax(0,5.5rem))]">
++          {apps.map((app) => {
++            if (app.id === "custom-retroarch") return <SteamShortcut key={app.id} kind="retroarch" iconClass={iconContainerClass} />;
++            const visualState = getAppVisualState(app);
++            const BadgeIcon = visualState.badgeIcon;
++
++            return (
++              <button
++                key={app.id}
++                onClick={() => {
++                  if (app.id === "custom-retroarch") {
++                    void fetch("/api/v1/gaming-apps", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "retroarch-focus" }) });
++                  }
++                  onOpenApp(app);
++                }}
++                onContextMenu={(event) => onAppContextMenu(event, app)}
++                className={`group flex flex-col items-center gap-2 rounded-xl p-2 cursor-pointer ${
++                  activeAppId === app.id
++                    ? "bg-primary/15 ring-1 ring-primary/40"
++                    : "hover:bg-foreground/5"
++                } ${animationsEnabled ? "transition-all duration-200" : ""} ${
++                  animationsEnabled ? "group-active:scale-95" : ""
++                }`}
++                aria-label={`Open ${app.name}`}
++                data-app-status={app.status}
++                title={visualState.title}
++              >
++                <div className="relative">
++                  <div
++                    className={`${iconContainerClass} relative flex items-center justify-center overflow-hidden border grain-overlay ${visualState.ringClass} ${!app.logoUrl ? `${app.bgColor} ${app.color}` : "bg-white/90"} shadow-lg shadow-black/20 ${
++                      animationsEnabled
++                        ? `transition-transform duration-200 group-hover:scale-110`
++                        : ""
++                    }`}
++                    style={{ transform: "translateZ(0)" }}
++                  >
++                    {app.logoUrl ? (
++                      <>
++                        {!loadedImages.has(app.logoUrl) ? (
++                          <div className="absolute inset-0 flex items-center justify-center">
++                            <div className={`${iconGlyphClass} animate-pulse`}>
++                              <app.icon className="h-full w-full opacity-30" />
++                            </div>
++                          </div>
++                        ) : null}
++                        {/* eslint-disable-next-line @next/next/no-img-element */}
++                        <img
++                          src={app.logoUrl}
++                          alt={`${app.name} logo`}
++                          className={`absolute inset-0 h-full w-full object-contain p-1.5 ${visualState.imageClass}`}
++                          loading="lazy"
++                          decoding="async"
++                          onLoad={() => {
++                            setLoadedImages((previous) =>
++                              new Set(previous).add(app.logoUrl!),
++                            );
++                          }}
++                          onError={(event) => {
++                            const img = event.currentTarget;
++                            const container = img.parentElement;
++                            if (!container) return;
++                            img.style.display = "none";
++                            container.classList.remove("bg-white/90");
++                            container.classList.add(app.bgColor, app.color);
++                            const fallback = container.querySelector(
++                              "[data-fallback-icon]",
++                            );
++                            if (fallback instanceof HTMLElement) {
++                              fallback.style.display = "block";
++                            }
++                          }}
++                        />
++                        <app.icon
++                          className={`${iconGlyphClass} hidden ${visualState.imageClass}`}
++                          data-fallback-icon
++                        />
++                      </>
++                    ) : (
++                      <app.icon
++                        className={`${iconGlyphClass} ${visualState.imageClass}`}
++                      />
++                    )}
++                  </div>
++                  {BadgeIcon ? (
++                    <span className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
++                      <BadgeIcon
++                        className={`size-7 drop-shadow-[0_1px_3px_rgba(0,0,0,0.7)] ${visualState.badgeClass} ${
++                          animationsEnabled ? visualState.badgeIconClass : ""
++                        }`}
++                      />
++                    </span>
++                  ) : null}
++                  {app.updateAvailable && app.status === "running" ? (
++                    <span
++                      className="pointer-events-none absolute -top-0.5 -right-0.5 size-2.5 rounded-full border border-background bg-primary"
++                      title="Update available"
++                    />
++                  ) : null}
++                </div>
++
++                <span
++                  className={`max-w-[4.5rem] truncate text-center text-2xs font-medium leading-tight tracking-tight text-foreground/80 ${
++                    animationsEnabled
++                      ? "transition-colors group-hover:text-foreground"
++                      : ""
++                  }`}
++                >
++                  {app.name}
++                </span>
++              </button>
++            );
++          })}
++          {apps.some(app => app.id === "custom-retroarch") && <SteamShortcut iconClass={iconContainerClass} />}
++          {apps.some(app => app.id === "custom-retroarch") && (
++            <a href="/sunshine/" target="_blank" rel="noopener noreferrer"
++              aria-label="Open Sunshine" title="Sunshine streaming settings"
++              className={`group flex flex-col items-center gap-2 rounded-xl p-2 cursor-pointer hover:bg-foreground/5 ${animationsEnabled ? "transition-all duration-200" : ""}`}>
++              <div className={`${iconContainerClass} flex items-center justify-center border border-amber-300/30 bg-amber-500/20 text-amber-200 shadow-lg shadow-black/20`}>
++                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" className={iconGlyphClass} aria-hidden="true">
++                  <circle cx="12" cy="12" r="4" />
++                  <path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.4 1.4m11.2 11.2L19 19M5 19l1.4-1.4M17.6 6.4 19 5" />
++                </svg>
++              </div>
++              <span className="max-w-[4.5rem] truncate text-center text-2xs font-medium leading-tight tracking-tight text-foreground/80 group-hover:text-foreground">Sunshine</span>
++            </a>
++          )}
++        </div>
++      )}
++    </>
++  );
++}
+diff --git a/modules/settings/components/panel/registry.tsx b/modules/settings/components/panel/registry.tsx
+index b1dfbb6..8ea2d89 100644
+--- a/modules/settings/components/panel/registry.tsx
++++ b/modules/settings/components/panel/registry.tsx
+@@ -37,6 +37,10 @@ import type {
+   SettingsSectionDefinition,
+ } from "@/modules/settings/components/panel/types";
+ 
++import { BluetoothSection, BluetoothIcon } from "@/modules/settings/components/panel/sections/bluetooth-section";
++
++import { PerformanceSection, PerformanceIcon } from "@/modules/settings/components/panel/sections/performance-section";
++
+ export const SETTINGS_SECTIONS: SettingsSection[] = [
+   // System
+   { id: "general",          label: "General",          icon: ServerRegular       },
+@@ -58,6 +62,8 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
+   // Danger zone
+   { id: "power",            label: "Power",            icon: PowerRegular        },
+   { id: "advanced",         label: "Advanced",         icon: WrenchRegular       },
++  { id: "bluetooth",        label: "Bluetooth",        icon: BluetoothIcon       },
++  { id: "performance",      label: "Performance",      icon: PerformanceIcon     },
+ ];
+ 
+ type SettingsRegistryContext = {
+@@ -171,6 +177,10 @@ export function buildSettingsSectionDefinitions(
+       save: getDefaultSaveConfig(context.settingsBackend, "updates"),
+     },
+ 
++    { ...SETTINGS_SECTIONS[15], liveApply: true, render: () => <PerformanceSection /> },
++
++    { ...SETTINGS_SECTIONS[14], liveApply: true, render: () => <BluetoothSection /> },
++
+     // ── Infrastructure ───────────────────────────────────────────────────
+     {
+       ...SETTINGS_SECTIONS[3], // Network
+diff --git a/modules/settings/components/panel/sections/server-info-section.tsx b/modules/settings/components/panel/sections/server-info-section.tsx
+index 96414af..aaae19f 100644
+--- a/modules/settings/components/panel/sections/server-info-section.tsx
++++ b/modules/settings/components/panel/sections/server-info-section.tsx
+@@ -10,9 +10,9 @@ import { useState } from "react";
+ 
+ function formatBytes(bytes: number | null): string {
+   if (bytes === null) return "—";
+-  if (bytes >= 1_073_741_824) return `${(bytes / 1_073_741_824).toFixed(1)} GB`;
+-  if (bytes >= 1_048_576) return `${(bytes / 1_048_576).toFixed(0)} MB`;
+-  if (bytes >= 1_024) return `${(bytes / 1_024).toFixed(0)} KB`;
++  if (bytes >= 1_073_741_824) return `${(bytes / 1_073_741_824).toFixed(1)} GiB`;
++  if (bytes >= 1_048_576) return `${(bytes / 1_048_576).toFixed(0)} MiB`;
++  if (bytes >= 1_024) return `${(bytes / 1_024).toFixed(0)} KiB`;
+   return `${bytes} B`;
+ }
+ 
+@@ -77,14 +77,16 @@ function MemoryTab({ info }: { info: ServerHardwareInfo }) {
+   return (
+     <div>
+       <Rows>
+-        <Row label="Total" value={formatBytes(memory.totalBytes)} />
+-        {filledSlots.length > 0 && <Row label="Modules" value={`${filledSlots.length} installed`} />}
++        {memory.installedBytes && <Row label="Installed RAM" value={formatBytes(memory.installedBytes)} />}
++        <Row label={memory.installedBytes ? "Usable by Linux" : "Total"} value={formatBytes(memory.totalBytes)} />
++        {memory.reservedBytes != null && memory.reservedBytes > 0 && <Row label="Hardware / system reserved" value={formatBytes(memory.reservedBytes)} />}
++        {!memory.onBoard && filledSlots.length > 0 && <Row label="Modules" value={`${filledSlots.length} installed`} />}
+       </Rows>
+ 
+       {filledSlots.length > 0 && (
+         <>
+           <div className="border-t border-glass-border/40 px-4 pb-1 pt-3">
+-            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/50">Slots</span>
++            <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/50">{memory.onBoard ? "On-board memory" : "Slots"}</span>
+           </div>
+           <div className="divide-y divide-glass-border/30 px-4">
+             {filledSlots.map((slot, i) => (
+@@ -120,6 +122,7 @@ function GpuTab({ info }: { info: ServerHardwareInfo }) {
+             <div className="mb-1 text-xs font-medium text-foreground">{name}</div>
+             <div className="flex flex-wrap gap-x-4 gap-y-0.5">
+               {ctrl.bus && <span className="text-[11px] text-muted-foreground/70">{ctrl.bus}</span>}
++              {ctrl.sharedMemory && <span className="text-[11px] text-muted-foreground/70">Shared system RAM</span>}
+               {ctrl.vramBytes && <span className="text-[11px] text-muted-foreground/70">VRAM {formatBytes(ctrl.vramBytes)}</span>}
+               {ctrl.subVendor && <span className="text-[11px] text-muted-foreground/70">{ctrl.subVendor}</span>}
+             </div>
+diff --git a/modules/settings/components/panel/types.ts b/modules/settings/components/panel/types.ts
+index c3556f5..31ece95 100644
+--- a/modules/settings/components/panel/types.ts
++++ b/modules/settings/components/panel/types.ts
+@@ -14,6 +14,8 @@ export type DesktopPreferencesApi = ReturnType<typeof useDesktopPreferences>;
+ export type SettingsSectionId =
+   | "general"
+   | "network"
++  | "bluetooth"
++  | "performance"
+   | "storage"
+   | "docker"
+   | "integrations"
+diff --git a/modules/settings/components/settings.tsx b/modules/settings/components/settings.tsx
+index 6ed4e50..00c7052 100644
+--- a/modules/settings/components/settings.tsx
++++ b/modules/settings/components/settings.tsx
+@@ -22,8 +22,8 @@ import { useSettingsBackend } from "@/modules/settings/hooks/useSettingsBackend"
+ import { cn } from "@/lib/utils";
+ 
+ const SIDEBAR_GROUPS: { label: string; ids: SettingsSectionId[] }[] = [
+-  { label: "System",         ids: ["general", "appearance", "updates"] },
+-  { label: "Infrastructure", ids: ["network", "storage", "docker"] },
++  { label: "System",         ids: ["general", "appearance", "updates", "performance"] },
++  { label: "Infrastructure", ids: ["network", "bluetooth", "storage", "docker"] },
+   { label: "Integrations",  ids: ["integrations"] },
+   { label: "Automation",     ids: ["scheduled-tasks", "backup"] },
+   { label: "Access",         ids: ["users", "security", "notifications"] },
+diff --git a/modules/settings/hooks/useSettingsBackend.ts b/modules/settings/hooks/useSettingsBackend.ts
+index c3ae00c..85204ba 100644
+--- a/modules/settings/hooks/useSettingsBackend.ts
++++ b/modules/settings/hooks/useSettingsBackend.ts
+@@ -1,815 +1,815 @@
+-"use client";
+-
+-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+-import { useMemo, useRef } from "react";
+-import { toast } from "sonner";
+-import { dispatchDesktopNotificationEvent } from "@/lib/desktop/notification-events";
+-import {
+-  SYSTEM_SECURITY_BAN_DURATION_MAX,
+-  SYSTEM_SECURITY_BAN_DURATION_MIN,
+-  SYSTEM_SECURITY_MAX_RETRIES_MAX,
+-  SYSTEM_SECURITY_MAX_RETRIES_MIN,
+-  SYSTEM_SECURITY_POLICY_OPTIONS,
+-  SYSTEM_TIMEZONE_OPTIONS,
+-  type SystemBackupListResponse,
+-  type SystemBackupSettings,
+-  type SystemPreferences,
+-  type SystemSecuritySettings,
+-  type SystemUpdateStatus,
+-} from "@/lib/shared/contracts/system";
+-import { queryKeys } from "@/lib/shared/query-keys";
+-import { useCurrentUser } from "@/hooks/useCurrentUser";
+-import {
+-  applySystemUpdateRequest,
+-  checkSystemUpdatesRequest,
+-  factoryResetRequest,
+-  fetchPowerCapabilitiesRequest,
+-  fetchScheduledRebootRequest,
+-  fetchSystemBackupsRequest,
+-  fetchSystemPreferencesRequest,
+-  fetchSystemSecurityRequest,
+-  fetchSystemUpdatesRequest,
+-  pruneDockerImagesRequest,
+-  pruneDockerVolumesRequest,
+-  rebootNowRequest,
+-  restoreBackupRequest,
+-  runBackupNowRequest,
+-  saveBackupSettingsRequest,
+-  saveScheduledRebootRequest,
+-  saveSystemPreferencesRequest,
+-  saveSystemSecurityRequest,
+-  shutdownNowRequest,
+-} from "@/modules/settings/hooks/backend/api";
+-import {
+-  CHECK_UPDATES_COOLDOWN_MS,
+-  DEFAULT_BACKUP_ROOT,
+-  DEFAULT_SCHEDULED_REBOOT_CONFIG,
+-} from "@/modules/settings/hooks/backend/constants";
+-import { createSettingsCapabilities } from "@/modules/settings/hooks/backend/capabilities";
+-import {
+-  formatBytes,
+-  formatGigabytes,
+-  formatUptime,
+-  mapContainerToViewModel,
+-} from "@/modules/settings/hooks/backend/formatters";
+-import type { ScheduledRebootConfig } from "@/modules/settings/hooks/backend/types";
+-import {
+-  persistPowerActionState,
+-  useUpdateRecoveryState,
+-} from "@/modules/settings/hooks/useUpdateRecoveryState";
+-import { useDockerStatsSnapshot } from "@/modules/system/hooks/useDockerStats";
+-import { useDockerInfo } from "@/modules/system/hooks/useDockerInfo";
+-import { useLocalFolderShares } from "@/modules/files/hooks/useLocalFolderShares";
+-import { useNetworkStatus } from "@/modules/system/hooks/useNetworkStatus";
+-import { useNetworkShares } from "@/modules/files/hooks/useNetworkShares";
+-import { useSystemMetrics } from "@/modules/system/hooks/useSystemMetrics";
+-import { useWifiNetworks } from "@/modules/system/hooks/useWifiNetworks";
+-
+-export function useSettingsBackend() {
+-  const queryClient = useQueryClient();
+-  const { isUpdateRecoveryActive, setIsUpdateRecoveryActive } = useUpdateRecoveryState();
+-
+-  const currentUserQuery = useCurrentUser();
+-  const systemMetricsQuery = useSystemMetrics();
+-  const networkStatusQuery = useNetworkStatus();
+-  const wifiNetworksQuery = useWifiNetworks();
+-  const localFolderSharesQuery = useLocalFolderShares();
+-  const networkSharesQuery = useNetworkShares();
+-  const dockerStatsSnapshot = useDockerStatsSnapshot();
+-  const dockerInfoQuery = useDockerInfo();
+-  const systemUpdatesQuery = useQuery({
+-    queryKey: queryKeys.systemUpdates,
+-    queryFn: fetchSystemUpdatesRequest,
+-    staleTime: 60_000,
+-    enabled: !isUpdateRecoveryActive,
+-  });
+-  const systemPreferencesQuery = useQuery({
+-    queryKey: queryKeys.systemPreferences,
+-    queryFn: fetchSystemPreferencesRequest,
+-    staleTime: 60_000,
+-  });
+-  const systemSecurityQuery = useQuery({
+-    queryKey: queryKeys.systemSecurity,
+-    queryFn: fetchSystemSecurityRequest,
+-    staleTime: 60_000,
+-  });
+-  const backupsQuery = useQuery({
+-    queryKey: queryKeys.systemBackups,
+-    queryFn: fetchSystemBackupsRequest,
+-    staleTime: 60_000,
+-  });
+-  const scheduledRebootQuery = useQuery({
+-    queryKey: queryKeys.powerSchedule,
+-    queryFn: fetchScheduledRebootRequest,
+-    staleTime: 60_000,
+-  });
+-  const powerCapabilitiesQuery = useQuery({
+-    queryKey: queryKeys.powerCapabilities,
+-    queryFn: fetchPowerCapabilitiesRequest,
+-    staleTime: 5 * 60_000,
+-  });
+-
+-  const lastCheckedAtRef = useRef<number | null>(null);
+-
+-  const checkUpdatesMutation = useMutation({
+-    mutationFn: checkSystemUpdatesRequest,
+-    onSuccess: async (data) => {
+-      lastCheckedAtRef.current = Date.now();
+-      queryClient.setQueryData(queryKeys.systemUpdates, data);
+-      await queryClient.invalidateQueries({ queryKey: queryKeys.systemUpdates });
+-    },
+-  });
+-
+-  const applySystemUpdateMutation = useMutation({
+-    mutationFn: applySystemUpdateRequest,
+-  });
+-
+-  const systemPreferencesMutation = useMutation({
+-    mutationFn: saveSystemPreferencesRequest,
+-    onSuccess: async (data) => {
+-      queryClient.setQueryData(queryKeys.systemPreferences, data);
+-      await Promise.all([
+-        queryClient.invalidateQueries({ queryKey: queryKeys.systemPreferences }),
+-        queryClient.invalidateQueries({ queryKey: queryKeys.systemMetrics }),
+-      ]);
+-    },
+-  });
+-
+-  const systemSecurityMutation = useMutation({
+-    mutationFn: saveSystemSecurityRequest,
+-    onSuccess: async (data) => {
+-      queryClient.setQueryData(queryKeys.systemSecurity, data);
+-      await queryClient.invalidateQueries({ queryKey: queryKeys.systemSecurity });
+-    },
+-  });
+-
+-  const rebootMutation = useMutation({
+-    mutationFn: rebootNowRequest,
+-    onSuccess: () => {
+-      persistPowerActionState("reboot");
+-    },
+-  });
+-
+-  const shutdownMutation = useMutation({
+-    mutationFn: shutdownNowRequest,
+-    onSuccess: () => {
+-      persistPowerActionState("shutdown");
+-    },
+-  });
+-
+-  const factoryResetMutation = useMutation({
+-    mutationFn: factoryResetRequest,
+-    onSuccess: () => {
+-      persistPowerActionState("factory-reset");
+-    },
+-  });
+-
+-  const scheduledRebootMutation = useMutation({
+-    mutationFn: saveScheduledRebootRequest,
+-    onSuccess: async (data) => {
+-      queryClient.setQueryData(queryKeys.powerSchedule, data);
+-      await queryClient.invalidateQueries({ queryKey: queryKeys.powerSchedule });
+-    },
+-  });
+-
+-  const pruneImagesMutation = useMutation({
+-    mutationFn: pruneDockerImagesRequest,
+-    onSuccess: async () => {
+-      await Promise.all([
+-        queryClient.invalidateQueries({ queryKey: queryKeys.dockerInfo }),
+-        queryClient.invalidateQueries({ queryKey: queryKeys.systemMetrics }),
+-      ]);
+-    },
+-  });
+-
+-  const pruneVolumesMutation = useMutation({
+-    mutationFn: pruneDockerVolumesRequest,
+-    onSuccess: async () => {
+-      await Promise.all([
+-        queryClient.invalidateQueries({ queryKey: queryKeys.dockerInfo }),
+-        queryClient.invalidateQueries({ queryKey: queryKeys.systemMetrics }),
+-      ]);
+-    },
+-  });
+-
+-  const backupSettingsMutation = useMutation({
+-    mutationFn: saveBackupSettingsRequest,
+-    onSuccess: async (data) => {
+-      queryClient.setQueryData<SystemBackupListResponse | undefined>(
+-        queryKeys.systemBackups,
+-        (current) =>
+-          current
+-            ? {
+-                ...current,
+-                settings: data,
+-              }
+-            : {
+-                settings: data,
+-                backups: [],
+-                backupRoot: DEFAULT_BACKUP_ROOT,
+-              },
+-      );
+-      await queryClient.invalidateQueries({ queryKey: queryKeys.systemBackups });
+-    },
+-  });
+-
+-  const backupRunMutation = useMutation({
+-    mutationFn: runBackupNowRequest,
+-    onSuccess: async (data) => {
+-      dispatchDesktopNotificationEvent({
+-        id: `backup-run-${data.backup.id}`,
+-        title: "Backup Completed",
+-        message: `Backup ${data.backup.id} finished successfully.`,
+-        kind: "backup-report",
+-      });
+-      await queryClient.invalidateQueries({ queryKey: queryKeys.systemBackups });
+-    },
+-    onError: (error) => {
+-      dispatchDesktopNotificationEvent({
+-        id: `backup-run-error-${Date.now()}`,
+-        title: "Backup Failed",
+-        message: error instanceof Error ? error.message : "Backup run failed.",
+-        kind: "backup-report",
+-      });
+-    },
+-  });
+-
+-  const restoreBackupMutation = useMutation({
+-    mutationFn: restoreBackupRequest,
+-    onSuccess: (_data, backupId) => {
+-      dispatchDesktopNotificationEvent({
+-        id: `backup-restore-${backupId}`,
+-        title: "Restore Scheduled",
+-        message: `Restore from backup ${backupId} was accepted. Homeio will restart to finish it.`,
+-        kind: "backup-report",
+-      });
+-      persistPowerActionState("restore");
+-    },
+-    onError: (error, backupId) => {
+-      dispatchDesktopNotificationEvent({
+-        id: `backup-restore-error-${backupId}-${Date.now()}`,
+-        title: "Restore Failed",
+-        message: error instanceof Error ? error.message : `Restore from ${backupId} failed.`,
+-        kind: "backup-report",
+-      });
+-    },
+-  });
+-
+-  async function checkForUpdates() {
+-    if (checkUpdatesMutation.isPending || isUpdateRecoveryActive) return;
+-
+-    const lastChecked = lastCheckedAtRef.current;
+-    if (lastChecked !== null && Date.now() - lastChecked < CHECK_UPDATES_COOLDOWN_MS) {
+-      const currentStatus = queryClient.getQueryData<SystemUpdateStatus>(queryKeys.systemUpdates);
+-      if (currentStatus?.updateAvailable && currentStatus.latestVersion) {
+-        toast.success(`Homeio ${currentStatus.latestVersion} is available.`);
+-      } else if (currentStatus?.latestVersion) {
+-        toast.success("Homeio is already up to date.");
+-      } else {
+-        toast.info("Update check ran recently. Please wait a moment before trying again.");
+-      }
+-      return;
+-    }
+-
+-    try {
+-      const data = await checkUpdatesMutation.mutateAsync(undefined);
+-      if (data.updateAvailable && data.latestVersion) {
+-        toast.success(`Homeio ${data.latestVersion} is available.`);
+-      } else {
+-        toast.success("Homeio is already up to date.");
+-      }
+-      return data;
+-    } catch (error) {
+-      toast.error(
+-        error instanceof Error ? error.message : "Failed to check for Homeio updates.",
+-      );
+-      throw error;
+-    }
+-  }
+-
+-  const general = useMemo(() => {
+-    const metrics = systemMetricsQuery.data;
+-    const memory = metrics?.memory;
+-    const systemPreferences = systemPreferencesQuery.data;
+-
+-    return {
+-      hostname: systemPreferences?.hostname ?? metrics?.hostname ?? "--",
+-      platform: metrics?.platform ?? "--",
+-      kernel: metrics?.process.nodeVersion ?? "--",
+-      architecture: metrics?.architecture ?? "--",
+-      uptime: formatUptime(metrics?.uptimeSeconds),
+-      appVersion: process.env.NEXT_PUBLIC_APP_VERSION ?? "--",
+-      username: currentUserQuery.data?.username ?? "--",
+-      twoFactor: currentUserQuery.data?.twoFactor ?? { enabled: false, enrolledAt: null },
+-      isDemoMode: currentUserQuery.data?.isDemoMode ?? false,
+-      cpuSummary:
+-        metrics?.cpu.normalizedPercent !== undefined
+-          ? `${metrics.cpu.normalizedPercent.toFixed(0)}% load`
+-          : "--",
+-      memorySummary:
+-        memory && memory.totalBytes > 0
+-          ? `${formatGigabytes(memory.usedBytes)} / ${formatGigabytes(memory.totalBytes)}`
+-          : "--",
+-      temperatureSummary:
+-        metrics?.temperature.mainCelsius !== null && metrics?.temperature.mainCelsius !== undefined
+-          ? `${metrics.temperature.mainCelsius.toFixed(1)} C`
+-          : "--",
+-      processUptime: formatUptime(metrics?.process.uptimeSeconds),
+-      isLoading:
+-        systemMetricsQuery.isLoading ||
+-        currentUserQuery.isLoading ||
+-        systemPreferencesQuery.isLoading,
+-      unavailable: Boolean(systemMetricsQuery.error) || Boolean(systemPreferencesQuery.error),
+-      warning:
+-        systemMetricsQuery.error instanceof Error
+-          ? "System metrics unavailable. Showing placeholders where needed."
+-          : systemPreferencesQuery.error instanceof Error
+-            ? "System preferences unavailable."
+-            : currentUserQuery.error instanceof Error
+-              ? "User identity unavailable."
+-              : null,
+-    };
+-  }, [
+-    currentUserQuery.data?.username,
+-    currentUserQuery.data?.twoFactor,
+-    currentUserQuery.data?.isDemoMode,
+-    currentUserQuery.error,
+-    currentUserQuery.isLoading,
+-    systemPreferencesQuery.data,
+-    systemPreferencesQuery.error,
+-    systemPreferencesQuery.isLoading,
+-    systemMetricsQuery.data,
+-    systemMetricsQuery.error,
+-    systemMetricsQuery.isLoading,
+-  ]);
+-
+-  const network = useMemo(() => {
+-    const status = networkStatusQuery.data;
+-    const networks = wifiNetworksQuery.data ?? [];
+-
+-    return {
+-      connected: status?.connected ?? false,
+-      iface: status?.iface ?? "--",
+-      ipv4: status?.ipv4 ?? "--",
+-      ssid: status?.ssid ?? "--",
+-      signalPercent:
+-        status?.signalPercent !== null && status?.signalPercent !== undefined
+-          ? `${status.signalPercent}%`
+-          : "--",
+-      wifiCount: networks.length,
+-      topSsids: networks
+-        .map((networkEntry) => networkEntry.ssid)
+-        .filter((ssid) => ssid.trim().length > 0)
+-        .slice(0, 3),
+-      isLoading: networkStatusQuery.isLoading || wifiNetworksQuery.isLoading,
+-      unavailable: Boolean(networkStatusQuery.error),
+-      warning:
+-        networkStatusQuery.error instanceof Error
+-          ? "Network status unavailable."
+-          : wifiNetworksQuery.error instanceof Error
+-            ? "Wi-Fi scan unavailable."
+-            : null,
+-    };
+-  }, [
+-    networkStatusQuery.data,
+-    networkStatusQuery.error,
+-    networkStatusQuery.isLoading,
+-    wifiNetworksQuery.data,
+-    wifiNetworksQuery.error,
+-    wifiNetworksQuery.isLoading,
+-  ]);
+-
+-  const docker = useMemo(() => {
+-    const containers = dockerStatsSnapshot.stats.map(mapContainerToViewModel);
+-    const info = dockerInfoQuery.data;
+-
+-    return {
+-      containers,
+-      total: containers.length,
+-      running: containers.filter((container) => container.status === "running").length,
+-      images: info ? String(info.images) : "--",
+-      engineVersion: info?.engineVersion ?? "--",
+-      composeVersion: info?.composeVersion ?? "--",
+-      storageDriver: info?.storageDriver ?? "--",
+-      cgroupDriver: info?.cgroupDriver ?? "--",
+-      isLoading: dockerStatsSnapshot.isLoading || dockerInfoQuery.isLoading,
+-      unavailable: Boolean(dockerStatsSnapshot.error),
+-      warning: dockerStatsSnapshot.error
+-        ? "Docker stats unavailable."
+-        : dockerInfoQuery.error
+-          ? "Docker engine info unavailable."
+-          : null,
+-      pruneImages: {
+-        isPending: pruneImagesMutation.isPending,
+-        error:
+-          pruneImagesMutation.error instanceof Error
+-            ? pruneImagesMutation.error.message
+-            : null,
+-      },
+-      pruneVolumes: {
+-        isPending: pruneVolumesMutation.isPending,
+-        error:
+-          pruneVolumesMutation.error instanceof Error
+-            ? pruneVolumesMutation.error.message
+-            : null,
+-      },
+-    };
+-  }, [
+-    dockerInfoQuery.data,
+-    dockerInfoQuery.error,
+-    dockerInfoQuery.isLoading,
+-    dockerStatsSnapshot.error,
+-    dockerStatsSnapshot.isLoading,
+-    dockerStatsSnapshot.stats,
+-    pruneImagesMutation.error,
+-    pruneImagesMutation.isPending,
+-    pruneVolumesMutation.error,
+-    pruneVolumesMutation.isPending,
+-  ]);
+-
+-  const storage = useMemo(() => {
+-    const rootStorage = systemMetricsQuery.data?.storage;
+-    const disks = (rootStorage?.volumes ?? []).map((volume) => ({
+-      id: volume.id,
+-      label: volume.label,
+-      mountPath: volume.mountPath,
+-      totalBytes: volume.totalBytes,
+-      usedBytes: volume.usedBytes,
+-      usedPercent: volume.usedPercent,
+-      mediaType: volume.mediaType,
+-      filesystem: volume.filesystem,
+-    }));
+-    const localFolderShares = localFolderSharesQuery.data ?? [];
+-    const networkShares = networkSharesQuery.data ?? [];
+-    const shares = [
+-      ...localFolderShares.map((share) => ({
+-        id: share.id,
+-        name: share.shareName,
+-        path: `/${share.sharedPath}`,
+-        source: `/${share.sourcePath}`,
+-        protocol: "SMB usershare",
+-        status:
+-          share.isMounted && share.isExported
+-            ? "Mounted"
+-            : share.isMounted
+-              ? "Partially configured"
+-              : "Unmounted",
+-      })),
+-      ...networkShares.map((share) => ({
+-        id: share.id,
+-        name: `${share.host}/${share.share}`,
+-        path: `/${share.mountPath}`,
+-        source: `//${share.host}/${share.share}`,
+-        protocol: "SMB/CIFS",
+-        status: share.isMounted ? "Mounted" : "Unmounted",
+-      })),
+-    ].sort((left, right) => left.name.localeCompare(right.name));
+-
+-    const warnings: string[] = [];
+-    if (systemMetricsQuery.error) warnings.push("Storage metrics unavailable.");
+-    if (localFolderSharesQuery.error) {
+-      warnings.push("Local shared folders list unavailable.");
+-    }
+-    if (networkSharesQuery.error) {
+-      warnings.push("Network shares list unavailable.");
+-    }
+-
+-    return {
+-      mountPath: rootStorage?.mountPath ?? "--",
+-      totalBytes: rootStorage?.totalBytes ?? null,
+-      usedBytes: rootStorage?.usedBytes ?? null,
+-      availableBytes: rootStorage?.availableBytes ?? null,
+-      usedPercent:
+-        rootStorage && Number.isFinite(rootStorage.usedPercent)
+-          ? Number(rootStorage.usedPercent.toFixed(1))
+-          : null,
+-      summary:
+-        rootStorage && rootStorage.totalBytes > 0
+-          ? `${formatBytes(rootStorage.usedBytes)} / ${formatBytes(rootStorage.totalBytes)}`
+-          : "--",
+-      shares,
+-      localShareCount: localFolderShares.length,
+-      networkShareCount: networkShares.length,
+-      disks,
+-      raid: rootStorage?.raid ?? null,
+-      smart: rootStorage?.smart ?? null,
+-      isLoading:
+-        systemMetricsQuery.isLoading ||
+-        localFolderSharesQuery.isLoading ||
+-        networkSharesQuery.isLoading,
+-      unavailable: Boolean(systemMetricsQuery.error),
+-      warning: warnings.length > 0 ? warnings.join(" ") : null,
+-    };
+-  }, [
+-    localFolderSharesQuery.data,
+-    localFolderSharesQuery.error,
+-    localFolderSharesQuery.isLoading,
+-    networkSharesQuery.data,
+-    networkSharesQuery.error,
+-    networkSharesQuery.isLoading,
+-    systemMetricsQuery.data?.storage,
+-    systemMetricsQuery.error,
+-    systemMetricsQuery.isLoading,
+-  ]);
+-
+-  const updates = useMemo(() => {
+-    const data = systemUpdatesQuery.data ?? {
+-      currentVersion: general.appVersion,
+-      latestVersion: null,
+-      updateAvailable: false,
+-      checkedAt: null,
+-    };
+-
+-    return {
+-      currentVersion: data.currentVersion,
+-      latestVersion: data.latestVersion,
+-      updateAvailable: data.updateAvailable,
+-      checkedAt: data.checkedAt,
+-      isLoading: systemUpdatesQuery.isLoading,
+-      unavailable: !isUpdateRecoveryActive && Boolean(systemUpdatesQuery.error),
+-      warning:
+-        isUpdateRecoveryActive
+-          ? null
+-          : systemUpdatesQuery.error
+-            ? "Homeio update status unavailable."
+-            : null,
+-      isChecking: checkUpdatesMutation.isPending,
+-      isApplying: applySystemUpdateMutation.isPending,
+-      checkError:
+-        !isUpdateRecoveryActive && checkUpdatesMutation.error instanceof Error
+-          ? checkUpdatesMutation.error.message
+-          : null,
+-      applyError:
+-        !isUpdateRecoveryActive && applySystemUpdateMutation.error instanceof Error
+-          ? applySystemUpdateMutation.error.message
+-          : null,
+-      isRecoveryActive: isUpdateRecoveryActive,
+-    };
+-  }, [
+-    applySystemUpdateMutation.error,
+-    applySystemUpdateMutation.isPending,
+-    checkUpdatesMutation.error,
+-    checkUpdatesMutation.isPending,
+-    general.appVersion,
+-    isUpdateRecoveryActive,
+-    systemUpdatesQuery.data,
+-    systemUpdatesQuery.error,
+-    systemUpdatesQuery.isLoading,
+-  ]);
+-
+-  const generalPreferences = useMemo(() => {
+-    const data = systemPreferencesQuery.data ?? {
+-      hostname: general.hostname,
+-      timezone: SYSTEM_TIMEZONE_OPTIONS[0],
+-    };
+-
+-    return {
+-      hostname: data.hostname,
+-      timezone: data.timezone,
+-      isLoading: systemPreferencesQuery.isLoading,
+-      isSaving: systemPreferencesMutation.isPending,
+-      error:
+-        systemPreferencesMutation.error instanceof Error
+-          ? systemPreferencesMutation.error.message
+-          : systemPreferencesQuery.error instanceof Error
+-            ? systemPreferencesQuery.error.message
+-            : null,
+-      timezoneOptions:
+-        data.timezone &&
+-        !SYSTEM_TIMEZONE_OPTIONS.some((option) => option === data.timezone)
+-        ? [data.timezone, ...SYSTEM_TIMEZONE_OPTIONS]
+-        : [...SYSTEM_TIMEZONE_OPTIONS],
+-    };
+-  }, [
+-    general.hostname,
+-    systemPreferencesMutation.error,
+-    systemPreferencesMutation.isPending,
+-    systemPreferencesQuery.data,
+-    systemPreferencesQuery.error,
+-    systemPreferencesQuery.isLoading,
+-  ]);
+-
+-  const backup = useMemo(() => {
+-    const snapshot = backupsQuery.data;
+-    const settings = snapshot?.settings ?? {
+-      enabled: false,
+-      frequency: "weekly" as const,
+-      dayOfWeek: "sunday" as const,
+-      time: "03:00",
+-      retentionCount: 7,
+-    };
+-
+-    return {
+-      settings: {
+-        ...settings,
+-        isLoading: backupsQuery.isLoading,
+-        isSaving: backupSettingsMutation.isPending,
+-        error:
+-          backupSettingsMutation.error instanceof Error
+-            ? backupSettingsMutation.error.message
+-            : backupsQuery.error instanceof Error
+-              ? backupsQuery.error.message
+-              : null,
+-      },
+-      backups: snapshot?.backups ?? [],
+-      backupRoot: snapshot?.backupRoot ?? DEFAULT_BACKUP_ROOT,
+-      isLoading: backupsQuery.isLoading,
+-      runNow: {
+-        isPending: backupRunMutation.isPending,
+-        error:
+-          backupRunMutation.error instanceof Error
+-            ? backupRunMutation.error.message
+-            : null,
+-      },
+-      restore: {
+-        isPending: restoreBackupMutation.isPending,
+-        error:
+-          restoreBackupMutation.error instanceof Error
+-            ? restoreBackupMutation.error.message
+-            : null,
+-      },
+-    };
+-  }, [
+-    backupsQuery.data,
+-    backupsQuery.error,
+-    backupsQuery.isLoading,
+-    backupRunMutation.error,
+-    backupRunMutation.isPending,
+-    backupSettingsMutation.error,
+-    backupSettingsMutation.isPending,
+-    restoreBackupMutation.error,
+-    restoreBackupMutation.isPending,
+-  ]);
+-
+-  const security = useMemo(() => {
+-    const data = systemSecurityQuery.data ?? {
+-      firewallEnabled: false,
+-      firewallIncomingPolicy: "deny" as const,
+-      firewallOutgoingPolicy: "allow" as const,
+-      fail2banEnabled: false,
+-      fail2banMaxRetries: 5,
+-      fail2banBanDurationSeconds: 3600,
+-    };
+-
+-    return {
+-      firewall: {
+-        enabled: data.firewallEnabled,
+-        incomingPolicy: data.firewallIncomingPolicy,
+-        outgoingPolicy: data.firewallOutgoingPolicy,
+-        policyOptions: [...SYSTEM_SECURITY_POLICY_OPTIONS],
+-      },
+-      fail2ban: {
+-        enabled: data.fail2banEnabled,
+-        maxRetries: data.fail2banMaxRetries,
+-        banDuration: data.fail2banBanDurationSeconds,
+-        maxRetriesBounds: {
+-          min: SYSTEM_SECURITY_MAX_RETRIES_MIN,
+-          max: SYSTEM_SECURITY_MAX_RETRIES_MAX,
+-        },
+-        banDurationBounds: {
+-          min: SYSTEM_SECURITY_BAN_DURATION_MIN,
+-          max: SYSTEM_SECURITY_BAN_DURATION_MAX,
+-        },
+-      },
+-      isLoading: systemSecurityQuery.isLoading,
+-      isSaving: systemSecurityMutation.isPending,
+-      unavailable: Boolean(systemSecurityQuery.error),
+-      error:
+-        systemSecurityMutation.error instanceof Error
+-          ? systemSecurityMutation.error.message
+-          : systemSecurityQuery.error instanceof Error
+-            ? systemSecurityQuery.error.message
+-            : null,
+-    };
+-  }, [
+-    systemSecurityMutation.error,
+-    systemSecurityMutation.isPending,
+-    systemSecurityQuery.data,
+-    systemSecurityQuery.error,
+-    systemSecurityQuery.isLoading,
+-  ]);
+-
+-  const power = useMemo(() => {
+-    const scheduledReboot: ScheduledRebootConfig =
+-      scheduledRebootQuery.data ?? DEFAULT_SCHEDULED_REBOOT_CONFIG;
+-    const caps = powerCapabilitiesQuery.data;
+-
+-    return {
+-      reboot: {
+-        available: caps?.reboot ?? false,
+-        isPending: rebootMutation.isPending,
+-        error:
+-          rebootMutation.error instanceof Error
+-            ? rebootMutation.error.message
+-            : null,
+-      },
+-      shutdown: {
+-        available: caps?.shutdown ?? false,
+-        isPending: shutdownMutation.isPending,
+-        error:
+-          shutdownMutation.error instanceof Error
+-            ? shutdownMutation.error.message
+-            : null,
+-      },
+-      factoryReset: {
+-        available: caps?.factoryReset ?? false,
+-        isPending: factoryResetMutation.isPending,
+-        error:
+-          factoryResetMutation.error instanceof Error
+-            ? factoryResetMutation.error.message
+-            : null,
+-      },
+-      scheduledReboot: {
+-        ...scheduledReboot,
+-        available: caps?.scheduledReboot ?? false,
+-        isLoading: scheduledRebootQuery.isLoading,
+-        isPending: scheduledRebootMutation.isPending,
+-        error:
+-          scheduledRebootMutation.error instanceof Error
+-            ? scheduledRebootMutation.error.message
+-            : scheduledRebootQuery.error instanceof Error
+-              ? scheduledRebootQuery.error.message
+-              : null,
+-      },
+-    };
+-  }, [
+-    factoryResetMutation.error,
+-    factoryResetMutation.isPending,
+-    powerCapabilitiesQuery.data,
+-    rebootMutation.error,
+-    rebootMutation.isPending,
+-    scheduledRebootMutation.error,
+-    scheduledRebootMutation.isPending,
+-    scheduledRebootQuery.data,
+-    scheduledRebootQuery.error,
+-    scheduledRebootQuery.isLoading,
+-    shutdownMutation.error,
+-    shutdownMutation.isPending,
+-  ]);
+-
+-  const capabilities = useMemo(() => createSettingsCapabilities(), []);
+-
+-  return {
+-    general,
+-    generalPreferences,
+-    network,
+-    storage,
+-    docker,
+-    security,
+-    backup,
+-    updates,
+-    power,
+-    capabilities,
+-    actions: {
+-      checkForUpdates,
+-      applySystemUpdate: async () => {
+-        if (isUpdateRecoveryActive || applySystemUpdateMutation.isPending) return;
+-
+-        try {
+-          await applySystemUpdateMutation.mutateAsync(undefined);
+-        } catch {
+-          return;
+-        }
+-
+-        setIsUpdateRecoveryActive(true);
+-        persistPowerActionState("update", {
+-          requestDispatchedAt: new Date().toISOString(),
+-        });
+-        window.location.replace("/updating");
+-      },
+-      saveGeneralPreferences: async (input: SystemPreferences) => {
+-        await systemPreferencesMutation.mutateAsync(input);
+-      },
+-      saveSecuritySettings: async (input: SystemSecuritySettings) => {
+-        await systemSecurityMutation.mutateAsync(input);
+-      },
+-      saveBackupSettings: async (input: SystemBackupSettings) => {
+-        await backupSettingsMutation.mutateAsync(input);
+-      },
+-      runBackupNow: async () => {
+-        await backupRunMutation.mutateAsync(undefined);
+-      },
+-      restoreBackup: async (backupId: string) => {
+-        await restoreBackupMutation.mutateAsync(backupId);
+-      },
+-      rebootNow: async () => {
+-        await rebootMutation.mutateAsync(undefined);
+-      },
+-      shutdownNow: async () => {
+-        await shutdownMutation.mutateAsync(undefined);
+-      },
+-      saveScheduledReboot: async (input: ScheduledRebootConfig) => {
+-        await scheduledRebootMutation.mutateAsync(input);
+-      },
+-      pruneDockerImages: async () => {
+-        await pruneImagesMutation.mutateAsync(undefined);
+-      },
+-      pruneDockerVolumes: async () => {
+-        await pruneVolumesMutation.mutateAsync(undefined);
+-      },
+-      factoryReset: async () => {
+-        await factoryResetMutation.mutateAsync(undefined);
+-      },
+-    },
+-  };
+-}
++"use client";
++
++import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
++import { useMemo, useRef } from "react";
++import { toast } from "sonner";
++import { dispatchDesktopNotificationEvent } from "@/lib/desktop/notification-events";
++import {
++  SYSTEM_SECURITY_BAN_DURATION_MAX,
++  SYSTEM_SECURITY_BAN_DURATION_MIN,
++  SYSTEM_SECURITY_MAX_RETRIES_MAX,
++  SYSTEM_SECURITY_MAX_RETRIES_MIN,
++  SYSTEM_SECURITY_POLICY_OPTIONS,
++  SYSTEM_TIMEZONE_OPTIONS,
++  type SystemBackupListResponse,
++  type SystemBackupSettings,
++  type SystemPreferences,
++  type SystemSecuritySettings,
++  type SystemUpdateStatus,
++} from "@/lib/shared/contracts/system";
++import { queryKeys } from "@/lib/shared/query-keys";
++import { useCurrentUser } from "@/hooks/useCurrentUser";
++import {
++  applySystemUpdateRequest,
++  checkSystemUpdatesRequest,
++  factoryResetRequest,
++  fetchPowerCapabilitiesRequest,
++  fetchScheduledRebootRequest,
++  fetchSystemBackupsRequest,
++  fetchSystemPreferencesRequest,
++  fetchSystemSecurityRequest,
++  fetchSystemUpdatesRequest,
++  pruneDockerImagesRequest,
++  pruneDockerVolumesRequest,
++  rebootNowRequest,
++  restoreBackupRequest,
++  runBackupNowRequest,
++  saveBackupSettingsRequest,
++  saveScheduledRebootRequest,
++  saveSystemPreferencesRequest,
++  saveSystemSecurityRequest,
++  shutdownNowRequest,
++} from "@/modules/settings/hooks/backend/api";
++import {
++  CHECK_UPDATES_COOLDOWN_MS,
++  DEFAULT_BACKUP_ROOT,
++  DEFAULT_SCHEDULED_REBOOT_CONFIG,
++} from "@/modules/settings/hooks/backend/constants";
++import { createSettingsCapabilities } from "@/modules/settings/hooks/backend/capabilities";
++import {
++  formatBytes,
++  formatGigabytes,
++  formatUptime,
++  mapContainerToViewModel,
++} from "@/modules/settings/hooks/backend/formatters";
++import type { ScheduledRebootConfig } from "@/modules/settings/hooks/backend/types";
++import {
++  persistPowerActionState,
++  useUpdateRecoveryState,
++} from "@/modules/settings/hooks/useUpdateRecoveryState";
++import { useDockerStatsSnapshot } from "@/modules/system/hooks/useDockerStats";
++import { useDockerInfo } from "@/modules/system/hooks/useDockerInfo";
++import { useLocalFolderShares } from "@/modules/files/hooks/useLocalFolderShares";
++import { useNetworkStatus } from "@/modules/system/hooks/useNetworkStatus";
++import { useNetworkShares } from "@/modules/files/hooks/useNetworkShares";
++import { useSystemMetrics } from "@/modules/system/hooks/useSystemMetrics";
++import { useWifiNetworks } from "@/modules/system/hooks/useWifiNetworks";
++
++export function useSettingsBackend() {
++  const queryClient = useQueryClient();
++  const { isUpdateRecoveryActive, setIsUpdateRecoveryActive } = useUpdateRecoveryState();
++
++  const currentUserQuery = useCurrentUser();
++  const systemMetricsQuery = useSystemMetrics();
++  const networkStatusQuery = useNetworkStatus();
++  const wifiNetworksQuery = useWifiNetworks();
++  const localFolderSharesQuery = useLocalFolderShares();
++  const networkSharesQuery = useNetworkShares();
++  const dockerStatsSnapshot = useDockerStatsSnapshot();
++  const dockerInfoQuery = useDockerInfo();
++  const systemUpdatesQuery = useQuery({
++    queryKey: queryKeys.systemUpdates,
++    queryFn: fetchSystemUpdatesRequest,
++    staleTime: 60_000,
++    enabled: !isUpdateRecoveryActive,
++  });
++  const systemPreferencesQuery = useQuery({
++    queryKey: queryKeys.systemPreferences,
++    queryFn: fetchSystemPreferencesRequest,
++    staleTime: 60_000,
++  });
++  const systemSecurityQuery = useQuery({
++    queryKey: queryKeys.systemSecurity,
++    queryFn: fetchSystemSecurityRequest,
++    staleTime: 60_000,
++  });
++  const backupsQuery = useQuery({
++    queryKey: queryKeys.systemBackups,
++    queryFn: fetchSystemBackupsRequest,
++    staleTime: 60_000,
++  });
++  const scheduledRebootQuery = useQuery({
++    queryKey: queryKeys.powerSchedule,
++    queryFn: fetchScheduledRebootRequest,
++    staleTime: 60_000,
++  });
++  const powerCapabilitiesQuery = useQuery({
++    queryKey: queryKeys.powerCapabilities,
++    queryFn: fetchPowerCapabilitiesRequest,
++    staleTime: 5 * 60_000,
++  });
++
++  const lastCheckedAtRef = useRef<number | null>(null);
++
++  const checkUpdatesMutation = useMutation({
++    mutationFn: checkSystemUpdatesRequest,
++    onSuccess: async (data) => {
++      lastCheckedAtRef.current = Date.now();
++      queryClient.setQueryData(queryKeys.systemUpdates, data);
++      await queryClient.invalidateQueries({ queryKey: queryKeys.systemUpdates });
++    },
++  });
++
++  const applySystemUpdateMutation = useMutation({
++    mutationFn: applySystemUpdateRequest,
++  });
++
++  const systemPreferencesMutation = useMutation({
++    mutationFn: saveSystemPreferencesRequest,
++    onSuccess: async (data) => {
++      queryClient.setQueryData(queryKeys.systemPreferences, data);
++      await Promise.all([
++        queryClient.invalidateQueries({ queryKey: queryKeys.systemPreferences }),
++        queryClient.invalidateQueries({ queryKey: queryKeys.systemMetrics }),
++      ]);
++    },
++  });
++
++  const systemSecurityMutation = useMutation({
++    mutationFn: saveSystemSecurityRequest,
++    onSuccess: async (data) => {
++      queryClient.setQueryData(queryKeys.systemSecurity, data);
++      await queryClient.invalidateQueries({ queryKey: queryKeys.systemSecurity });
++    },
++  });
++
++  const rebootMutation = useMutation({
++    mutationFn: rebootNowRequest,
++    onSuccess: () => {
++      persistPowerActionState("reboot");
++    },
++  });
++
++  const shutdownMutation = useMutation({
++    mutationFn: shutdownNowRequest,
++    onSuccess: () => {
++      persistPowerActionState("shutdown");
++    },
++  });
++
++  const factoryResetMutation = useMutation({
++    mutationFn: factoryResetRequest,
++    onSuccess: () => {
++      persistPowerActionState("factory-reset");
++    },
++  });
++
++  const scheduledRebootMutation = useMutation({
++    mutationFn: saveScheduledRebootRequest,
++    onSuccess: async (data) => {
++      queryClient.setQueryData(queryKeys.powerSchedule, data);
++      await queryClient.invalidateQueries({ queryKey: queryKeys.powerSchedule });
++    },
++  });
++
++  const pruneImagesMutation = useMutation({
++    mutationFn: pruneDockerImagesRequest,
++    onSuccess: async () => {
++      await Promise.all([
++        queryClient.invalidateQueries({ queryKey: queryKeys.dockerInfo }),
++        queryClient.invalidateQueries({ queryKey: queryKeys.systemMetrics }),
++      ]);
++    },
++  });
++
++  const pruneVolumesMutation = useMutation({
++    mutationFn: pruneDockerVolumesRequest,
++    onSuccess: async () => {
++      await Promise.all([
++        queryClient.invalidateQueries({ queryKey: queryKeys.dockerInfo }),
++        queryClient.invalidateQueries({ queryKey: queryKeys.systemMetrics }),
++      ]);
++    },
++  });
++
++  const backupSettingsMutation = useMutation({
++    mutationFn: saveBackupSettingsRequest,
++    onSuccess: async (data) => {
++      queryClient.setQueryData<SystemBackupListResponse | undefined>(
++        queryKeys.systemBackups,
++        (current) =>
++          current
++            ? {
++                ...current,
++                settings: data,
++              }
++            : {
++                settings: data,
++                backups: [],
++                backupRoot: DEFAULT_BACKUP_ROOT,
++              },
++      );
++      await queryClient.invalidateQueries({ queryKey: queryKeys.systemBackups });
++    },
++  });
++
++  const backupRunMutation = useMutation({
++    mutationFn: runBackupNowRequest,
++    onSuccess: async (data) => {
++      dispatchDesktopNotificationEvent({
++        id: `backup-run-${data.backup.id}`,
++        title: "Backup Completed",
++        message: `Backup ${data.backup.id} finished successfully.`,
++        kind: "backup-report",
++      });
++      await queryClient.invalidateQueries({ queryKey: queryKeys.systemBackups });
++    },
++    onError: (error) => {
++      dispatchDesktopNotificationEvent({
++        id: `backup-run-error-${Date.now()}`,
++        title: "Backup Failed",
++        message: error instanceof Error ? error.message : "Backup run failed.",
++        kind: "backup-report",
++      });
++    },
++  });
++
++  const restoreBackupMutation = useMutation({
++    mutationFn: restoreBackupRequest,
++    onSuccess: (_data, backupId) => {
++      dispatchDesktopNotificationEvent({
++        id: `backup-restore-${backupId}`,
++        title: "Restore Scheduled",
++        message: `Restore from backup ${backupId} was accepted. Homeio will restart to finish it.`,
++        kind: "backup-report",
++      });
++      persistPowerActionState("restore");
++    },
++    onError: (error, backupId) => {
++      dispatchDesktopNotificationEvent({
++        id: `backup-restore-error-${backupId}-${Date.now()}`,
++        title: "Restore Failed",
++        message: error instanceof Error ? error.message : `Restore from ${backupId} failed.`,
++        kind: "backup-report",
++      });
++    },
++  });
++
++  async function checkForUpdates() {
++    if (checkUpdatesMutation.isPending || isUpdateRecoveryActive) return;
++
++    const lastChecked = lastCheckedAtRef.current;
++    if (lastChecked !== null && Date.now() - lastChecked < CHECK_UPDATES_COOLDOWN_MS) {
++      const currentStatus = queryClient.getQueryData<SystemUpdateStatus>(queryKeys.systemUpdates);
++      if (currentStatus?.updateAvailable && currentStatus.latestVersion) {
++        toast.success(`Homeio ${currentStatus.latestVersion} is available.`);
++      } else if (currentStatus?.latestVersion) {
++        toast.success("Homeio is already up to date.");
++      } else {
++        toast.info("Update check ran recently. Please wait a moment before trying again.");
++      }
++      return;
++    }
++
++    try {
++      const data = await checkUpdatesMutation.mutateAsync(undefined);
++      if (data.updateAvailable && data.latestVersion) {
++        toast.success(`Homeio ${data.latestVersion} is available.`);
++      } else {
++        toast.success("Homeio is already up to date.");
++      }
++      return data;
++    } catch (error) {
++      toast.error(
++        error instanceof Error ? error.message : "Failed to check for Homeio updates.",
++      );
++      throw error;
++    }
++  }
++
++  const general = useMemo(() => {
++    const metrics = systemMetricsQuery.data;
++    const memory = metrics?.memory;
++    const systemPreferences = systemPreferencesQuery.data;
++
++    return {
++      hostname: systemPreferences?.hostname ?? metrics?.hostname ?? "--",
++      platform: metrics?.platform ?? "--",
++      kernel: metrics?.kernelRelease ?? "--",
++      architecture: metrics?.architecture ?? "--",
++      uptime: formatUptime(metrics?.uptimeSeconds),
++      appVersion: process.env.NEXT_PUBLIC_APP_VERSION ?? "--",
++      username: currentUserQuery.data?.username ?? "--",
++      twoFactor: currentUserQuery.data?.twoFactor ?? { enabled: false, enrolledAt: null },
++      isDemoMode: currentUserQuery.data?.isDemoMode ?? false,
++      cpuSummary:
++        metrics?.cpu.normalizedPercent !== undefined
++          ? `${metrics.cpu.normalizedPercent.toFixed(0)}% load`
++          : "--",
++      memorySummary:
++        memory && memory.totalBytes > 0
++          ? `${formatGigabytes(memory.usedBytes)} / ${formatGigabytes(memory.totalBytes)}`
++          : "--",
++      temperatureSummary:
++        metrics?.temperature.mainCelsius !== null && metrics?.temperature.mainCelsius !== undefined
++          ? `${metrics.temperature.mainCelsius.toFixed(1)} C`
++          : "--",
++      processUptime: formatUptime(metrics?.process.uptimeSeconds),
++      isLoading:
++        systemMetricsQuery.isLoading ||
++        currentUserQuery.isLoading ||
++        systemPreferencesQuery.isLoading,
++      unavailable: Boolean(systemMetricsQuery.error) || Boolean(systemPreferencesQuery.error),
++      warning:
++        systemMetricsQuery.error instanceof Error
++          ? "System metrics unavailable. Showing placeholders where needed."
++          : systemPreferencesQuery.error instanceof Error
++            ? "System preferences unavailable."
++            : currentUserQuery.error instanceof Error
++              ? "User identity unavailable."
++              : null,
++    };
++  }, [
++    currentUserQuery.data?.username,
++    currentUserQuery.data?.twoFactor,
++    currentUserQuery.data?.isDemoMode,
++    currentUserQuery.error,
++    currentUserQuery.isLoading,
++    systemPreferencesQuery.data,
++    systemPreferencesQuery.error,
++    systemPreferencesQuery.isLoading,
++    systemMetricsQuery.data,
++    systemMetricsQuery.error,
++    systemMetricsQuery.isLoading,
++  ]);
++
++  const network = useMemo(() => {
++    const status = networkStatusQuery.data;
++    const networks = wifiNetworksQuery.data ?? [];
++
++    return {
++      connected: status?.connected ?? false,
++      iface: status?.iface ?? "--",
++      ipv4: status?.ipv4 ?? "--",
++      ssid: status?.ssid ?? "--",
++      signalPercent:
++        status?.signalPercent !== null && status?.signalPercent !== undefined
++          ? `${status.signalPercent}%`
++          : "--",
++      wifiCount: networks.length,
++      topSsids: networks
++        .map((networkEntry) => networkEntry.ssid)
++        .filter((ssid) => ssid.trim().length > 0)
++        .slice(0, 3),
++      isLoading: networkStatusQuery.isLoading || wifiNetworksQuery.isLoading,
++      unavailable: Boolean(networkStatusQuery.error),
++      warning:
++        networkStatusQuery.error instanceof Error
++          ? "Network status unavailable."
++          : wifiNetworksQuery.error instanceof Error
++            ? "Wi-Fi scan unavailable."
++            : null,
++    };
++  }, [
++    networkStatusQuery.data,
++    networkStatusQuery.error,
++    networkStatusQuery.isLoading,
++    wifiNetworksQuery.data,
++    wifiNetworksQuery.error,
++    wifiNetworksQuery.isLoading,
++  ]);
++
++  const docker = useMemo(() => {
++    const containers = dockerStatsSnapshot.stats.map(mapContainerToViewModel);
++    const info = dockerInfoQuery.data;
++
++    return {
++      containers,
++      total: containers.length,
++      running: containers.filter((container) => container.status === "running").length,
++      images: info ? String(info.images) : "--",
++      engineVersion: info?.engineVersion ?? "--",
++      composeVersion: info?.composeVersion ?? "--",
++      storageDriver: info?.storageDriver ?? "--",
++      cgroupDriver: info?.cgroupDriver ?? "--",
++      isLoading: dockerStatsSnapshot.isLoading || dockerInfoQuery.isLoading,
++      unavailable: Boolean(dockerStatsSnapshot.error),
++      warning: dockerStatsSnapshot.error
++        ? "Docker stats unavailable."
++        : dockerInfoQuery.error
++          ? "Docker engine info unavailable."
++          : null,
++      pruneImages: {
++        isPending: pruneImagesMutation.isPending,
++        error:
++          pruneImagesMutation.error instanceof Error
++            ? pruneImagesMutation.error.message
++            : null,
++      },
++      pruneVolumes: {
++        isPending: pruneVolumesMutation.isPending,
++        error:
++          pruneVolumesMutation.error instanceof Error
++            ? pruneVolumesMutation.error.message
++            : null,
++      },
++    };
++  }, [
++    dockerInfoQuery.data,
++    dockerInfoQuery.error,
++    dockerInfoQuery.isLoading,
++    dockerStatsSnapshot.error,
++    dockerStatsSnapshot.isLoading,
++    dockerStatsSnapshot.stats,
++    pruneImagesMutation.error,
++    pruneImagesMutation.isPending,
++    pruneVolumesMutation.error,
++    pruneVolumesMutation.isPending,
++  ]);
++
++  const storage = useMemo(() => {
++    const rootStorage = systemMetricsQuery.data?.storage;
++    const disks = (rootStorage?.volumes ?? []).map((volume) => ({
++      id: volume.id,
++      label: volume.label,
++      mountPath: volume.mountPath,
++      totalBytes: volume.totalBytes,
++      usedBytes: volume.usedBytes,
++      usedPercent: volume.usedPercent,
++      mediaType: volume.mediaType,
++      filesystem: volume.filesystem,
++    }));
++    const localFolderShares = localFolderSharesQuery.data ?? [];
++    const networkShares = networkSharesQuery.data ?? [];
++    const shares = [
++      ...localFolderShares.map((share) => ({
++        id: share.id,
++        name: share.shareName,
++        path: `/${share.sharedPath}`,
++        source: `/${share.sourcePath}`,
++        protocol: "SMB usershare",
++        status:
++          share.isMounted && share.isExported
++            ? "Mounted"
++            : share.isMounted
++              ? "Partially configured"
++              : "Unmounted",
++      })),
++      ...networkShares.map((share) => ({
++        id: share.id,
++        name: `${share.host}/${share.share}`,
++        path: `/${share.mountPath}`,
++        source: `//${share.host}/${share.share}`,
++        protocol: "SMB/CIFS",
++        status: share.isMounted ? "Mounted" : "Unmounted",
++      })),
++    ].sort((left, right) => left.name.localeCompare(right.name));
++
++    const warnings: string[] = [];
++    if (systemMetricsQuery.error) warnings.push("Storage metrics unavailable.");
++    if (localFolderSharesQuery.error) {
++      warnings.push("Local shared folders list unavailable.");
++    }
++    if (networkSharesQuery.error) {
++      warnings.push("Network shares list unavailable.");
++    }
++
++    return {
++      mountPath: rootStorage?.mountPath ?? "--",
++      totalBytes: rootStorage?.totalBytes ?? null,
++      usedBytes: rootStorage?.usedBytes ?? null,
++      availableBytes: rootStorage?.availableBytes ?? null,
++      usedPercent:
++        rootStorage && Number.isFinite(rootStorage.usedPercent)
++          ? Number(rootStorage.usedPercent.toFixed(1))
++          : null,
++      summary:
++        rootStorage && rootStorage.totalBytes > 0
++          ? `${formatBytes(rootStorage.usedBytes)} / ${formatBytes(rootStorage.totalBytes)}`
++          : "--",
++      shares,
++      localShareCount: localFolderShares.length,
++      networkShareCount: networkShares.length,
++      disks,
++      raid: rootStorage?.raid ?? null,
++      smart: rootStorage?.smart ?? null,
++      isLoading:
++        systemMetricsQuery.isLoading ||
++        localFolderSharesQuery.isLoading ||
++        networkSharesQuery.isLoading,
++      unavailable: Boolean(systemMetricsQuery.error),
++      warning: warnings.length > 0 ? warnings.join(" ") : null,
++    };
++  }, [
++    localFolderSharesQuery.data,
++    localFolderSharesQuery.error,
++    localFolderSharesQuery.isLoading,
++    networkSharesQuery.data,
++    networkSharesQuery.error,
++    networkSharesQuery.isLoading,
++    systemMetricsQuery.data?.storage,
++    systemMetricsQuery.error,
++    systemMetricsQuery.isLoading,
++  ]);
++
++  const updates = useMemo(() => {
++    const data = systemUpdatesQuery.data ?? {
++      currentVersion: general.appVersion,
++      latestVersion: null,
++      updateAvailable: false,
++      checkedAt: null,
++    };
++
++    return {
++      currentVersion: data.currentVersion,
++      latestVersion: data.latestVersion,
++      updateAvailable: data.updateAvailable,
++      checkedAt: data.checkedAt,
++      isLoading: systemUpdatesQuery.isLoading,
++      unavailable: !isUpdateRecoveryActive && Boolean(systemUpdatesQuery.error),
++      warning:
++        isUpdateRecoveryActive
++          ? null
++          : systemUpdatesQuery.error
++            ? "Homeio update status unavailable."
++            : null,
++      isChecking: checkUpdatesMutation.isPending,
++      isApplying: applySystemUpdateMutation.isPending,
++      checkError:
++        !isUpdateRecoveryActive && checkUpdatesMutation.error instanceof Error
++          ? checkUpdatesMutation.error.message
++          : null,
++      applyError:
++        !isUpdateRecoveryActive && applySystemUpdateMutation.error instanceof Error
++          ? applySystemUpdateMutation.error.message
++          : null,
++      isRecoveryActive: isUpdateRecoveryActive,
++    };
++  }, [
++    applySystemUpdateMutation.error,
++    applySystemUpdateMutation.isPending,
++    checkUpdatesMutation.error,
++    checkUpdatesMutation.isPending,
++    general.appVersion,
++    isUpdateRecoveryActive,
++    systemUpdatesQuery.data,
++    systemUpdatesQuery.error,
++    systemUpdatesQuery.isLoading,
++  ]);
++
++  const generalPreferences = useMemo(() => {
++    const data = systemPreferencesQuery.data ?? {
++      hostname: general.hostname,
++      timezone: SYSTEM_TIMEZONE_OPTIONS[0],
++    };
++
++    return {
++      hostname: data.hostname,
++      timezone: data.timezone,
++      isLoading: systemPreferencesQuery.isLoading,
++      isSaving: systemPreferencesMutation.isPending,
++      error:
++        systemPreferencesMutation.error instanceof Error
++          ? systemPreferencesMutation.error.message
++          : systemPreferencesQuery.error instanceof Error
++            ? systemPreferencesQuery.error.message
++            : null,
++      timezoneOptions:
++        data.timezone &&
++        !SYSTEM_TIMEZONE_OPTIONS.some((option) => option === data.timezone)
++        ? [data.timezone, ...SYSTEM_TIMEZONE_OPTIONS]
++        : [...SYSTEM_TIMEZONE_OPTIONS],
++    };
++  }, [
++    general.hostname,
++    systemPreferencesMutation.error,
++    systemPreferencesMutation.isPending,
++    systemPreferencesQuery.data,
++    systemPreferencesQuery.error,
++    systemPreferencesQuery.isLoading,
++  ]);
++
++  const backup = useMemo(() => {
++    const snapshot = backupsQuery.data;
++    const settings = snapshot?.settings ?? {
++      enabled: false,
++      frequency: "weekly" as const,
++      dayOfWeek: "sunday" as const,
++      time: "03:00",
++      retentionCount: 7,
++    };
++
++    return {
++      settings: {
++        ...settings,
++        isLoading: backupsQuery.isLoading,
++        isSaving: backupSettingsMutation.isPending,
++        error:
++          backupSettingsMutation.error instanceof Error
++            ? backupSettingsMutation.error.message
++            : backupsQuery.error instanceof Error
++              ? backupsQuery.error.message
++              : null,
++      },
++      backups: snapshot?.backups ?? [],
++      backupRoot: snapshot?.backupRoot ?? DEFAULT_BACKUP_ROOT,
++      isLoading: backupsQuery.isLoading,
++      runNow: {
++        isPending: backupRunMutation.isPending,
++        error:
++          backupRunMutation.error instanceof Error
++            ? backupRunMutation.error.message
++            : null,
++      },
++      restore: {
++        isPending: restoreBackupMutation.isPending,
++        error:
++          restoreBackupMutation.error instanceof Error
++            ? restoreBackupMutation.error.message
++            : null,
++      },
++    };
++  }, [
++    backupsQuery.data,
++    backupsQuery.error,
++    backupsQuery.isLoading,
++    backupRunMutation.error,
++    backupRunMutation.isPending,
++    backupSettingsMutation.error,
++    backupSettingsMutation.isPending,
++    restoreBackupMutation.error,
++    restoreBackupMutation.isPending,
++  ]);
++
++  const security = useMemo(() => {
++    const data = systemSecurityQuery.data ?? {
++      firewallEnabled: false,
++      firewallIncomingPolicy: "deny" as const,
++      firewallOutgoingPolicy: "allow" as const,
++      fail2banEnabled: false,
++      fail2banMaxRetries: 5,
++      fail2banBanDurationSeconds: 3600,
++    };
++
++    return {
++      firewall: {
++        enabled: data.firewallEnabled,
++        incomingPolicy: data.firewallIncomingPolicy,
++        outgoingPolicy: data.firewallOutgoingPolicy,
++        policyOptions: [...SYSTEM_SECURITY_POLICY_OPTIONS],
++      },
++      fail2ban: {
++        enabled: data.fail2banEnabled,
++        maxRetries: data.fail2banMaxRetries,
++        banDuration: data.fail2banBanDurationSeconds,
++        maxRetriesBounds: {
++          min: SYSTEM_SECURITY_MAX_RETRIES_MIN,
++          max: SYSTEM_SECURITY_MAX_RETRIES_MAX,
++        },
++        banDurationBounds: {
++          min: SYSTEM_SECURITY_BAN_DURATION_MIN,
++          max: SYSTEM_SECURITY_BAN_DURATION_MAX,
++        },
++      },
++      isLoading: systemSecurityQuery.isLoading,
++      isSaving: systemSecurityMutation.isPending,
++      unavailable: Boolean(systemSecurityQuery.error),
++      error:
++        systemSecurityMutation.error instanceof Error
++          ? systemSecurityMutation.error.message
++          : systemSecurityQuery.error instanceof Error
++            ? systemSecurityQuery.error.message
++            : null,
++    };
++  }, [
++    systemSecurityMutation.error,
++    systemSecurityMutation.isPending,
++    systemSecurityQuery.data,
++    systemSecurityQuery.error,
++    systemSecurityQuery.isLoading,
++  ]);
++
++  const power = useMemo(() => {
++    const scheduledReboot: ScheduledRebootConfig =
++      scheduledRebootQuery.data ?? DEFAULT_SCHEDULED_REBOOT_CONFIG;
++    const caps = powerCapabilitiesQuery.data;
++
++    return {
++      reboot: {
++        available: caps?.reboot ?? false,
++        isPending: rebootMutation.isPending,
++        error:
++          rebootMutation.error instanceof Error
++            ? rebootMutation.error.message
++            : null,
++      },
++      shutdown: {
++        available: caps?.shutdown ?? false,
++        isPending: shutdownMutation.isPending,
++        error:
++          shutdownMutation.error instanceof Error
++            ? shutdownMutation.error.message
++            : null,
++      },
++      factoryReset: {
++        available: caps?.factoryReset ?? false,
++        isPending: factoryResetMutation.isPending,
++        error:
++          factoryResetMutation.error instanceof Error
++            ? factoryResetMutation.error.message
++            : null,
++      },
++      scheduledReboot: {
++        ...scheduledReboot,
++        available: caps?.scheduledReboot ?? false,
++        isLoading: scheduledRebootQuery.isLoading,
++        isPending: scheduledRebootMutation.isPending,
++        error:
++          scheduledRebootMutation.error instanceof Error
++            ? scheduledRebootMutation.error.message
++            : scheduledRebootQuery.error instanceof Error
++              ? scheduledRebootQuery.error.message
++              : null,
++      },
++    };
++  }, [
++    factoryResetMutation.error,
++    factoryResetMutation.isPending,
++    powerCapabilitiesQuery.data,
++    rebootMutation.error,
++    rebootMutation.isPending,
++    scheduledRebootMutation.error,
++    scheduledRebootMutation.isPending,
++    scheduledRebootQuery.data,
++    scheduledRebootQuery.error,
++    scheduledRebootQuery.isLoading,
++    shutdownMutation.error,
++    shutdownMutation.isPending,
++  ]);
++
++  const capabilities = useMemo(() => createSettingsCapabilities(), []);
++
++  return {
++    general,
++    generalPreferences,
++    network,
++    storage,
++    docker,
++    security,
++    backup,
++    updates,
++    power,
++    capabilities,
++    actions: {
++      checkForUpdates,
++      applySystemUpdate: async () => {
++        if (isUpdateRecoveryActive || applySystemUpdateMutation.isPending) return;
++
++        try {
++          await applySystemUpdateMutation.mutateAsync(undefined);
++        } catch {
++          return;
++        }
++
++        setIsUpdateRecoveryActive(true);
++        persistPowerActionState("update", {
++          requestDispatchedAt: new Date().toISOString(),
++        });
++        window.location.replace("/updating");
++      },
++      saveGeneralPreferences: async (input: SystemPreferences) => {
++        await systemPreferencesMutation.mutateAsync(input);
++      },
++      saveSecuritySettings: async (input: SystemSecuritySettings) => {
++        await systemSecurityMutation.mutateAsync(input);
++      },
++      saveBackupSettings: async (input: SystemBackupSettings) => {
++        await backupSettingsMutation.mutateAsync(input);
++      },
++      runBackupNow: async () => {
++        await backupRunMutation.mutateAsync(undefined);
++      },
++      restoreBackup: async (backupId: string) => {
++        await restoreBackupMutation.mutateAsync(backupId);
++      },
++      rebootNow: async () => {
++        await rebootMutation.mutateAsync(undefined);
++      },
++      shutdownNow: async () => {
++        await shutdownMutation.mutateAsync(undefined);
++      },
++      saveScheduledReboot: async (input: ScheduledRebootConfig) => {
++        await scheduledRebootMutation.mutateAsync(input);
++      },
++      pruneDockerImages: async () => {
++        await pruneImagesMutation.mutateAsync(undefined);
++      },
++      pruneDockerVolumes: async () => {
++        await pruneVolumesMutation.mutateAsync(undefined);
++      },
++      factoryReset: async () => {
++        await factoryResetMutation.mutateAsync(undefined);
++      },
++    },
++  };
++}
+diff --git a/modules/system/components/status-bar/battery-popover.tsx b/modules/system/components/status-bar/battery-popover.tsx
+index 8487c47..311a772 100644
+--- a/modules/system/components/status-bar/battery-popover.tsx
++++ b/modules/system/components/status-bar/battery-popover.tsx
+@@ -1,115 +1,117 @@
+-"use client";
+-
+-import { PopoverShell } from "@/modules/system/components/status-bar/popover-shell";
+-import type { BatteryPopoverProps } from "@/modules/system/components/status-bar/types";
+-import { safePercent } from "@/modules/system/components/status-bar/utils";
+-import { BatteryCharging, BatteryFull } from "@/components/icons/platform-icons";
+-
+-function formatCapacityRatio(value: number | null | undefined) {
+-  if (typeof value !== "number" || Number.isNaN(value)) return "--";
+-  return `${value.toFixed(1)}%`;
+-}
+-
+-export function BatteryPopover({ battery, onClose }: BatteryPopoverProps) {
+-  const hasBattery = Boolean(battery?.hasBattery);
+-  const batteryPercent =
+-    typeof battery?.percent === "number" ? safePercent(battery.percent) : null;
+-  const isCharging = Boolean(battery?.isCharging);
+-  const acConnected = battery?.acConnected;
+-  const manufacturer = battery?.manufacturer ?? null;
+-  const cycleCount = battery?.cycleCount;
+-  const capacityRatio = formatCapacityRatio(
+-    battery?.designToMaxCapacityPercent,
+-  );
+-  const statusLabel = !hasBattery
+-    ? "No battery detected"
+-    : isCharging
+-      ? "Charging"
+-      : "On battery";
+-
+-  return (
+-    <PopoverShell onClose={onClose} className="w-64">
+-      <div className="p-4">
+-        <div className="flex items-center gap-3 mb-4">
+-          <div className="size-10 rounded-xl bg-status-green/15 flex items-center justify-center">
+-            {isCharging ? (
+-              <BatteryCharging className="size-5 text-status-green" />
+-            ) : (
+-              <BatteryFull className="size-5 text-status-amber" />
+-            )}
+-          </div>
+-          <div>
+-            <p className="text-sm font-semibold text-foreground">
+-              Battery Status
+-            </p>
+-            <p className="text-xs text-muted-foreground">{statusLabel}</p>
+-          </div>
+-        </div>
+-
+-        <div className="space-y-3">
+-          <div>
+-            <div className="flex items-center justify-between text-xs mb-1">
+-              <span className="text-muted-foreground">Charge Level</span>
+-              <span className="text-foreground font-medium">
+-                {batteryPercent === null ? "--" : `${batteryPercent}%`}
+-              </span>
+-            </div>
+-            <div className="h-2 rounded-[var(--radius)] bg-muted overflow-hidden">
+-              <div
+-                className={`h-full rounded-[var(--radius)] ${
+-                  batteryPercent === null
+-                    ? "bg-muted-foreground/40"
+-                    : batteryPercent < 20
+-                      ? "bg-status-red"
+-                      : batteryPercent < 50
+-                        ? "bg-status-amber"
+-                        : "bg-status-green"
+-                }`}
+-                style={{ width: `${batteryPercent ?? 0}%` }}
+-              />
+-            </div>
+-          </div>
+-
+-          <div className="grid grid-cols-2 gap-3 pt-1">
+-            <div className="flex flex-col gap-0.5">
+-              <span className="text-xs text-muted-foreground uppercase tracking-wider">
+-                AC Power
+-              </span>
+-              <span className="text-sm font-medium text-foreground">
+-                {typeof acConnected === "boolean"
+-                  ? acConnected
+-                    ? "Connected"
+-                    : "Disconnected"
+-                  : "--"}
+-              </span>
+-            </div>
+-            <div className="flex flex-col gap-0.5">
+-              <span className="text-xs text-muted-foreground uppercase tracking-wider">
+-                Cycle Count
+-              </span>
+-              <span className="text-sm font-medium text-foreground">
+-                {typeof cycleCount === "number" ? cycleCount : "--"}
+-              </span>
+-            </div>
+-            <div className="flex flex-col gap-0.5">
+-              <span className="text-xs text-muted-foreground uppercase tracking-wider">
+-                Design / Max
+-              </span>
+-              <span className="text-sm font-medium text-foreground">
+-                {capacityRatio}
+-              </span>
+-            </div>
+-            <div className="flex flex-col gap-0.5">
+-              <span className="text-xs text-muted-foreground uppercase tracking-wider">
+-                Manufacturer
+-              </span>
+-              <span className="text-sm font-medium text-foreground">
+-                {manufacturer ?? "--"}
+-              </span>
+-            </div>
+-          </div>
+-        </div>
+-      </div>
+-    </PopoverShell>
+-  );
+-}
++"use client";
++
++import { PopoverShell } from "@/modules/system/components/status-bar/popover-shell";
++import type { BatteryPopoverProps } from "@/modules/system/components/status-bar/types";
++import { safePercent } from "@/modules/system/components/status-bar/utils";
++import { BatteryCharging, BatteryFull } from "@/components/icons/platform-icons";
++
++function formatCapacityRatio(value: number | null | undefined) {
++  if (typeof value !== "number" || Number.isNaN(value)) return "--";
++  return `${value.toFixed(1)}%`;
++}
++
++export function BatteryPopover({ battery, onClose }: BatteryPopoverProps) {
++  const hasBattery = Boolean(battery?.hasBattery);
++  const batteryPercent =
++    typeof battery?.percent === "number" ? safePercent(battery.percent) : null;
++  const isCharging = Boolean(battery?.isCharging);
++  const acConnected = battery?.acConnected;
++  const manufacturer = battery?.manufacturer ?? null;
++  const cycleCount = battery?.cycleCount;
++  const capacityRatio = formatCapacityRatio(
++    battery?.designToMaxCapacityPercent,
++  );
++  const statusLabel = !hasBattery
++    ? "No battery detected"
++    : isCharging
++      ? "Charging"
++      : acConnected === true
++        ? "External power"
++        : "On battery";
++
++  return (
++    <PopoverShell onClose={onClose} className="w-64">
++      <div className="p-4">
++        <div className="flex items-center gap-3 mb-4">
++          <div className="size-10 rounded-xl bg-status-green/15 flex items-center justify-center">
++            {isCharging ? (
++              <BatteryCharging className="size-5 text-status-green" />
++            ) : (
++              <BatteryFull className="size-5 text-status-amber" />
++            )}
++          </div>
++          <div>
++            <p className="text-sm font-semibold text-foreground">
++              Battery Status
++            </p>
++            <p className="text-xs text-muted-foreground">{statusLabel}</p>
++          </div>
++        </div>
++
++        <div className="space-y-3">
++          <div>
++            <div className="flex items-center justify-between text-xs mb-1">
++              <span className="text-muted-foreground">Charge Level</span>
++              <span className="text-foreground font-medium">
++                {batteryPercent === null ? "--" : `${batteryPercent}%`}
++              </span>
++            </div>
++            <div className="h-2 rounded-[var(--radius)] bg-muted overflow-hidden">
++              <div
++                className={`h-full rounded-[var(--radius)] ${
++                  batteryPercent === null
++                    ? "bg-muted-foreground/40"
++                    : batteryPercent < 20
++                      ? "bg-status-red"
++                      : batteryPercent < 50
++                        ? "bg-status-amber"
++                        : "bg-status-green"
++                }`}
++                style={{ width: `${batteryPercent ?? 0}%` }}
++              />
++            </div>
++          </div>
++
++          <div className="grid grid-cols-2 gap-3 pt-1">
++            <div className="flex flex-col gap-0.5">
++              <span className="text-xs text-muted-foreground uppercase tracking-wider">
++                AC Power
++              </span>
++              <span className="text-sm font-medium text-foreground">
++                {typeof acConnected === "boolean"
++                  ? acConnected
++                    ? "Connected"
++                    : "Disconnected"
++                  : "--"}
++              </span>
++            </div>
++            <div className="flex flex-col gap-0.5">
++              <span className="text-xs text-muted-foreground uppercase tracking-wider">
++                Cycle Count
++              </span>
++              <span className="text-sm font-medium text-foreground">
++                {typeof cycleCount === "number" ? cycleCount : "--"}
++              </span>
++            </div>
++            <div className="flex flex-col gap-0.5">
++              <span className="text-xs text-muted-foreground uppercase tracking-wider">
++                Full / Design
++              </span>
++              <span className="text-sm font-medium text-foreground">
++                {capacityRatio}
++              </span>
++            </div>
++            <div className="flex flex-col gap-0.5">
++              <span className="text-xs text-muted-foreground uppercase tracking-wider">
++                Manufacturer
++              </span>
++              <span className="text-sm font-medium text-foreground">
++                {manufacturer ?? "--"}
++              </span>
++            </div>
++          </div>
++        </div>
++      </div>
++    </PopoverShell>
++  );
++}
+diff --git a/next.config.mjs b/next.config.mjs
+index 09d0929..973531b 100644
+--- a/next.config.mjs
++++ b/next.config.mjs
+@@ -5,6 +5,7 @@ const pkg = require("./package.json");
+ 
+ /** @type {import('next').NextConfig} */
+ const nextConfig = {
++  serverExternalPackages: ["dbus-next"],
+   experimental: {
+     proxyClientMaxBodySize: "10gb",
+     serverActions: {

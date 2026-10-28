@@ -1,0 +1,14 @@
+[Unit]
+Description=Optional storage memory reserve for Redmi NAS
+After=local-fs.target android_boot_completed.service
+RequiresMountsFor=/userdata
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/redmi-nas/memory-extension.py boot
+TimeoutStartSec=300
+RemainAfterExit=yes
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

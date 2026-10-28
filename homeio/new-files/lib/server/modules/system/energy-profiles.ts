@@ -1,6 +1,8 @@
 import { readFile, readdir } from "node:fs/promises";
 import dbus from "dbus-next";
 import { readArmSocHardware } from "./arm-soc-hardware";
+import { memoryExtension } from "./memory-extension";
+import { batteryCharge } from "./battery-charge";
 
 export const ENERGY_PROFILES = ["power-saver", "balanced", "performance"] as const;
 export type EnergyProfile = typeof ENERGY_PROFILES[number];
@@ -94,6 +96,8 @@ export async function getEnergyStatus() {
     governorMatchesProfile: profile.available && clusters.length > 0 && clusters.every(cluster => cluster.governor === expectedGovernor),
     gpu: { model: facts.gpu?.model ?? "Integrated GPU", ...parseGpuTelemetry(opp, gpuState, gpuUsage), dvfs: "automatic" },
     memory: { ...parseMemoryInfo(mem), installedBytes: facts.installedMemoryBytes, dvfs: "automatic" },
+    memoryExtension: await memoryExtension("status"),
+    batteryCharge: await batteryCharge("status"),
   };
 }
 

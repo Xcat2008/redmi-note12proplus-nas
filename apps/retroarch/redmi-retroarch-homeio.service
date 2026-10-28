@@ -5,7 +5,9 @@ Requires=docker.service
 
 [Service]
 Type=simple
-ExecStart=/usr/local/lib/redmi-nas/retroarch/homeio-session.py
+ExecStart=/usr/local/lib/redmi-nas/retroarch/homeio-session.py --runtime-only
+RuntimeDirectory=redmi-gaming
+RuntimeDirectoryPreserve=yes
 Restart=on-failure
 RestartSec=5
 TimeoutStopSec=20

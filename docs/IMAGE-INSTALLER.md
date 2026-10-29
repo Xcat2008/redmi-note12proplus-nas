@@ -18,9 +18,9 @@ A clean candidate has been assembled separately from the author’s working NAS.
 | Bluetooth controls in Homeio | First-setup source included; authenticated controls and Xbox pairing/navigation exercised on the project NAS |
 | CPU energy profiles | Corrected native power manager and Homeio controls included; factory CPU/GPU/memory scaling tested on the running device |
 | Per-installation Linux PIN and SSH key | Implemented; no shared default credentials |
-| Windows installer | Built; default operation only verifies the package |
+| Windows installer | Graphical assistant and CLI built; candidate installation remains blocked, verification does not contact the phone |
 | Model, unlocked bootloader, slot and partition-layout checks | Implemented |
-| Proxmox / eight-CPU KVM profile | Tested on the configured device; compatibility source published separately; not included in this candidate |
+| Proxmox / eight-CPU KVM profile | Tested on the configured device. Absent from rc7; the next 0.2 candidate preloads clean userspace and matching KVM modules, disabled by default. Fresh EL2 activation and installation remain unvalidated. |
 | Clean physical install, Wi-Fi onboarding, first NAS setup | Pending |
 | Complete binary redistribution and corresponding-source audit | Pending before public binaries |
 
@@ -40,7 +40,9 @@ The target is specifically **22101316UG / rubypro, 256 GB**, using the documente
 
 ## Proxmox image boundary
 
-The [experimental KVM/Proxmox profile](PROXMOX.md) was validated after this candidate was assembled. Its eight-CPU cache adapter, UEFI adaptation and matching KVM platform are not included in the previous boot/data files. The normal NAS installer does not activate EL2, alter boot metadata or install Proxmox by default.
+The [experimental KVM/Proxmox profile](PROXMOX.md) was validated after **0.1.0-rc7** was assembled. The next **0.2.0-rc1** build adds a clean Proxmox package base, the eight-CPU cache adapter, UEFI adaptation and matching KVM kernel/modules. Its optional service starts disabled, with no author password, account database or VM. It is a separate validation candidate, not a public approved replacement for rc7.
+
+The normal NAS installer does not activate EL2 or change the phone's partition metadata. A fresh device without actual EL2 cannot use hardware KVM merely because the new kernel and packages are present. `setup-preloaded.py` checks that capability before starting the optional environment; `prepare-profile.py` stages only separate, unpersonalized build roots. These helpers do not make the whole fresh platform installation validated.
 
 Proxmox is proposed as an optional component for the next compatible profile. A fresh image must be rebuilt from clean sources, receive individual setup credentials and pass the platform activation, clean-install and full-phone-reboot checks before it can be described as preinstalled. None of the candidate's physical-validation or redistribution flags has been enabled by the source publication.
 
@@ -54,7 +56,7 @@ Proxmox is proposed as an optional component for the next compatible profile. A 
 6. Complete one-time setup over the physical USB connection and configure Wi-Fi.
 7. Once internet is available, first-boot services install the pinned NAS stack. Open Homeio from another computer and create a separate web account.
 
-The current candidate blocks normal installation until the physical validation flag is set by a tested release. Its expert override is for supervised testing, not a recommended shortcut.
+The graphical assistant blocks installation until both the physical validation and binary redistribution checks pass. Its CLI expert override is for supervised testing, not a recommended shortcut. The 0.2 test profile also checks and supplies Linux AVB metadata for the unlocked bootloader; this change still needs physical first-install validation. See the [complete Windows user guide](INSTALL-WIZARD.pt-PT.md).
 
 ## Source
 

@@ -2,7 +2,7 @@
 
 ## Read this first
 
-This release publishes the working experiment's configuration and adaptations, **not a complete flashable distribution**. The base port still has manual stages; the public procedure has not been verified end to end on a second clean phone. Do not treat a kernel build as a complete ROM. Never flash a 4G model's image onto this 5G model.
+The public release contains the working experiment's configuration, adaptations and guarded installer source. A complete image candidate and a Windows assistant are being prepared; **there is no approved public flashable release yet**. The procedure has not been verified end to end on a second clean phone. For the intended user workflow, read the [installation assistant guide](INSTALL-WIZARD.pt-PT.md). The engineering stages below document the port rather than replace that assistant. Never flash a 4G model's image onto this 5G model.
 
 The irreversible steps are bootloader unlocking and replacing Android userdata. Back up personal files, app data and authentication codes first. Use firmware for your exact model/region and keep a tested path to FASTBOOT and the complete factory recovery firmware.
 
@@ -33,7 +33,7 @@ This stage needs a porter. Use the exact factory boot image as the packaging bas
 
 On this device, **`fastboot boot` crashed the LK bootloader**. The working experiment used an image written to **boot_a** followed by reboot, with a correctly sized **128 MiB** boot image and an AVB footer, retaining the top-level factory vbmeta flags. The known working image used a test-key AVB footer; an unlocked bootloader is required. Image hashes in the manifest are identification records, not files offered for download.
 
-There is intentionally no automated flash or partition-format command in this repository. A reusable initramfs/rootfs image builder and a second-device clean-install test are still required before an installable release. Do not use the old experimental automatic stock-boot recovery approach: after userdata is ext4 Linux data, stock Android boot alone cannot restore the device.
+The guarded client in `image/installer.py` can flash only the documented boot/userdata package after its checks and explicit erase confirmation. Unvalidated candidates are blocked by default. A supervised clean-install and recovery test is still required before an installable public release. Do not use the old experimental automatic stock-boot recovery approach: after userdata is ext4 Linux data, stock Android boot alone cannot restore the device.
 
 ## 5. Prepare storage and accounts
 

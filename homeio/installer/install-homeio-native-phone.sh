@@ -1,6 +1,9 @@
 #!/bin/bash
 set -Eeuo pipefail
-test "$(uname -r)" = 4.19.191-g914ba8403bb3
+case "$(uname -r)" in
+  4.19.191-g914ba8403bb3|4.19.191-g914ba8403bb3-dirty) ;;
+  *) echo 'The matching tested Redmi kernel is required.' >&2; exit 1 ;;
+esac
 test "$(cat /proc/1/comm)" = systemd
 docker info >/dev/null
 command -v node >/dev/null || true

@@ -37,7 +37,9 @@ A atualização de código acrescenta apresentação Vulkan na Mali, distribuiç
 
 O Redmi do projeto já tem **Proxmox VE 9.2.20 ARM64 com aceleração KVM**. Foi testada uma VM Debian 13 com oito CPUs virtuais, com cálculo real nos oito núcleos físicos, persistência no disco, rede, consola web e reinício. A adaptação do QEMU resolve a inconsistência de cache entre os A55 e os A78 neste kernel.
 
-As [instruções e o estado dos testes](docs/PROXMOX.md) e o [código das correções](apps/proxmox/README.md) estão publicados. É um perfil experimental, proposto como componente opcional: **a imagem candidata anterior ainda não o inclui**. A instalação automática de raiz e o reinício completo do telefone com este perfil continuam por validar. O teste de reinício de 28 de outubro refere-se à base NAS anterior.
+As [instruções e o estado dos testes](docs/PROXMOX.md) e o [código das correções](apps/proxmox/README.md) estão publicados. É um perfil experimental e opcional: a rc7 não o inclui; a candidata 0.2 em preparação acrescenta a base Proxmox limpa, desligada, e o kernel/módulos KVM correspondentes. A ativação EL2 de raiz, a instalação completa e o reinício do telefone com este perfil continuam por validar. O teste de reinício de 28 de outubro refere-se à base NAS anterior.
+
+O [guia do assistente Windows](docs/INSTALL-WIZARD.pt-PT.md) explica o fluxo de descarga, verificação e configuração. O instalador gráfico mantém a instalação bloqueada nas candidatas não aprovadas. O primeiro arranque precisa de Internet para obter os programas de origem.
 
 ## Estado desta publicação
 

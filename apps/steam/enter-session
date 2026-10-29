@@ -1,16 +1,57 @@
-#!/bin/sh
-set -eu
-pid=0
-for attempt in $(seq 1 90); do
- pid=$(docker inspect -f '{{.State.Pid}}' retroarch 2>/dev/null || printf 0)
- if [ "$pid" -gt 1 ] && [ -S /DATA/AppData/custom-retroarch/config/.XDG/nas-pulse ] && docker exec retroarch test -S /tmp/.X11-unix/X1; then break;fi
- sleep 1
-done
-test "$pid" -gt 1
-resolv=$(docker inspect -f '{{.ResolvConfPath}}' retroarch)
-test -s "$resolv"
-exec unshare --mount /bin/sh -c '
- mount --make-rprivate /
- mount --bind "$1" /etc/resolv.conf
- exec nsenter -t "$2" -n -i runuser -u nas -- /DATA/AppData/custom-steam/bin/start-steam
-' sh "$resolv" "$pid"
+#!/usr/bin/python3
+# SPDX-License-Identifier: AGPL-3.0-only
+"""Share the gaming display while preserving host controller notifications."""
+import os
+from pathlib import Path
+import socket
+import subprocess
+import time
+
+SHIM='/usr/local/lib/redmi-nas/retroarch/udev-host-netlink.so'
+
+def host_monitors(count=8):
+    monitors=[]
+    try:
+        for _ in range(count):
+            monitor=socket.socket(socket.AF_NETLINK,socket.SOCK_RAW,15)
+            monitors.append(monitor)
+            monitor.set_inheritable(True)
+        return monitors
+    except BaseException:
+        for monitor in monitors:monitor.close()
+        raise
+
+def session_arguments(resolv,pid,fds):
+    if not str(pid).isdigit() or int(pid)<=1:raise ValueError('Gaming runtime is unavailable')
+    if not Path(resolv).is_absolute():raise ValueError('Resolver path must be absolute')
+    if not fds or any(not isinstance(fd,int) or fd<3 for fd in fds):raise ValueError('Invalid host monitor descriptors')
+    pool=','.join(str(fd) for fd in fds)
+    # Set the preload only after runuser drops privileges. The shared native
+    # shim transfers host udev sockets without changing the controller mapping.
+    return ['unshare','--mount','/bin/sh','-c',
+        'mount --make-rprivate / && mount --bind "$1" /etc/resolv.conf && '
+        'exec nsenter -t "$2" -n -i runuser -u nas -- env '
+        '"LD_PRELOAD=$3" "REDMI_NAS_UDEV_FDS=$4" '
+        '/DATA/AppData/custom-steam/bin/start-steam',
+        'sh',resolv,str(pid),SHIM,pool]
+
+def main():
+    pid=0
+    for _ in range(90):
+        result=subprocess.run(['docker','inspect','-f','{{.State.Pid}}','retroarch'],capture_output=True,text=True)
+        value=result.stdout.strip()
+        pid=int(value) if value.isdigit() else 0
+        if pid>1 and Path('/DATA/AppData/custom-retroarch/config/.XDG/nas-pulse').is_socket():
+            if subprocess.run(['docker','exec','retroarch','test','-S','/tmp/.X11-unix/X1'],capture_output=True).returncode==0:break
+        time.sleep(1)
+    else:raise RuntimeError('Gaming display did not become ready')
+    resolv=subprocess.check_output(['docker','inspect','-f','{{.ResolvConfPath}}','retroarch'],text=True).strip()
+    if not Path(resolv).is_file() or not Path(SHIM).is_file():raise RuntimeError('Gaming runtime files are unavailable')
+    monitors=host_monitors()
+    try:
+        args=session_arguments(resolv,pid,[m.fileno() for m in monitors])
+        os.execvp(args[0],args)
+    finally:
+        for monitor in monitors:monitor.close()
+
+if __name__=='__main__':main()

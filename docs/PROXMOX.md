@@ -10,10 +10,11 @@ This is an experimental device profile. It is separate from the previously assem
 | --- | --- |
 | Configured project phone | Proxmox installed, Homeio shortcut available, eight CPUs usable by VMs |
 | This repository | Compatibility source, a guarded updater for an existing environment, kernel configuration fragment and validation notes |
-| Existing clean image candidate | Does not contain the KVM platform changes or this Proxmox profile |
+| Previous 0.1.0-rc7 candidate | Does not contain the KVM platform changes or this Proxmox profile |
+| Next 0.2.0-rc1 validation build | Clean Proxmox packages and matching KVM kernel/modules are being staged, with the optional service disabled and no accounts or VMs. Fresh EL2 activation remains a separate unvalidated stage. |
 | Public automatic fresh Proxmox install | Not released; the platform activation and clean installation procedure still need validation |
 
-The intended distribution is an **optional virtual-machine component** on a compatible KVM platform. A NAS-only installation should not have to run the Proxmox daemons. This is a distribution plan, not an App Store entry that already exists. No normal NAS installer or first-boot default has been changed by this source update.
+The intended distribution is an **optional virtual-machine component** on a compatible KVM platform. A NAS-only installation should not have to run the Proxmox daemons. This is not an App Store entry that already exists. The image setup now accepts the exact tested KVM kernel and installs the isolated-environment prerequisites; the optional PVE service remains disabled until explicitly configured on a working KVM platform. Automatic personal backups remain off.
 
 ## How it is arranged
 
@@ -89,9 +90,11 @@ Fresh installation, a full phone reboot of this profile, nested PVE LXC, Windows
 
 The next image profile must be assembled from a clean base, carry these sources and matching modules, provision each installation's own credentials, and pass a supervised physical install and full reboot with recovery available. The boot-metadata activation needs its own device/layout checks and recovery validation. Redistribution/corresponding-source checks must also be completed. Until then, the existing image manifest stays unapproved and unchanged.
 
+`prepare-profile.py` and `setup-preloaded.py` are validation-stage tools for the clean optional userspace. The first refuses a personalized NAS or an initialized PVE account database; the second refuses missing KVM, unknown CPU/kernel profiles, existing roots it does not own and conflicting private networking. Its check-only invocation does not change configuration. It does not activate EL2, write phone boot metadata, install a kernel or create a VM. These tools still need the supervised clean-device test before an end-user one-click option is offered.
+
 ## Português
 
-No telemóvel do projeto, o Proxmox já está instalado e utiliza os oito núcleos. No GitHub estão as correções e os resultados técnicos, mas **a imagem candidata anterior ainda não inclui este perfil**. Descarregar o repositório não transforma essa imagem numa instalação KVM pronta.
+No telemóvel do projeto, o Proxmox já está instalado e utiliza os oito núcleos. No GitHub estão as correções e os resultados técnicos. A rc7 não inclui este perfil; a candidata 0.2 em preparação acrescenta os pacotes limpos e o kernel/módulos correspondentes, com o serviço desligado. Descarregar o repositório não transforma um aparelho sem EL2 numa plataforma KVM pronta.
 
 A proposta de distribuição é deixar o Proxmox como componente opcional numa plataforma KVM compatível. A entrada na loja e a instalação automática de raiz ainda não estão implementadas. O atualizador publicado destina-se apenas a um Proxmox isolado que já funciona; por defeito, verifica sem instalar. Não altera o arranque do telefone e não copia as contas do autor.
 

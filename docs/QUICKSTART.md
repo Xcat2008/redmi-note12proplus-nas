@@ -2,6 +2,8 @@
 
 ## What is automatic today?
 
+For the intended Windows experience, start with the [graphical installation assistant guide](INSTALL-WIZARD.pt-PT.md). The assistant and image candidate are prepared for validation; public installation remains blocked until the complete physical test and binary review pass. You do not need to follow the engineering build steps to use a future approved package.
+
 | Stage | Current experience |
 | --- | --- |
 | Xiaomi account and bootloader unlock | Manual, with Xiaomi's official tools |
@@ -40,4 +42,4 @@ After completion, open `http://redmi-nas.local` from another computer on the sam
 
 O comando acima **não instala Linux sobre Android**. Primeiro é necessário desbloquear pelo processo oficial Xiaomi e preparar o port Droidian descrito no [guia técnico](INSTALLATION.md). Essa parte ainda é para quem sabe trabalhar com boot images, Halium e recuperação de telemóveis.
 
-O passo necessário para uma experiência simples é produzir uma imagem Linux limpa e reproduzível, sem dados do autor, e testá-la de raiz num segundo aparelho. A imagem candidata e o instalador já foram construídos. A instalação física completa ainda precisa de validação antes de publicar os binários. Consulta o [estado da imagem](IMAGE-INSTALLER.md).
+Já está em preparação um pacote com imagens Linux limpas e um assistente gráfico Windows, sem dados do autor. O [guia do assistente](INSTALL-WIZARD.pt-PT.md) descreve os passos para o utilizador. A instalação física completa e a recuperação ainda precisam de validação antes de publicar os binários. Consulta o [estado da imagem](IMAGE-INSTALLER.md).

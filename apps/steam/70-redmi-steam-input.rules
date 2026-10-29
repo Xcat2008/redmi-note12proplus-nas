@@ -1,0 +1,5 @@
+# Steam Input runs as the dedicated NAS user, a member of the input group.
+# No world-writable input nodes or access to unrelated HID devices.
+KERNEL=="uinput", SUBSYSTEM=="misc", GROUP="input", MODE="0660", OPTIONS+="static_node=uinput"
+# Xbox One S Bluetooth/USB raw reports; evdev permissions remain vendor-managed.
+SUBSYSTEM=="hidraw", KERNELS=="000[35]:045E:02FD.*", GROUP="input", MODE="0660"

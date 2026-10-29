@@ -161,7 +161,7 @@
     "architecture": "arm64",
     "kernel_release": "4.19.191-g914ba8403bb3-dirty",
     "kernel_config_fragment": "kernel/kvm/experimental.config.fragment",
-    "kernel_config_fragment_sha256": "004eb5b5b9212c1b6252ecd7e8572064eb7582c0b92f4badd80ff25c5a729b26",
+    "kernel_config_fragment_sha256": "e420194654b32790afb2af2473605186a75cdf29a03806f0f578ed7f6e2b5990",
     "requires_actual_el2": true,
     "platform_activation_installer_published": false,
     "profile_source": "apps/proxmox",
@@ -183,8 +183,22 @@
     "clean_image_candidate_includes_profile": false,
     "fresh_install_verified": false,
     "full_phone_reboot_verified": false,
-    "normal_nas_installer_changed": false,
+    "normal_nas_installer_changed": true,
     "distribution_plan": "optional component after compatible platform and clean installation validation",
-    "maintenance_updater_scope": "existing isolated PVE profile only; not a bootstrap or kernel installer"
+    "maintenance_updater_scope": "existing isolated PVE profile only; not a bootstrap or kernel installer",
+    "kernel_resolved_config": "kernel/kvm/linux-resolved.config",
+    "kernel_resolved_config_sha256": "ce4f7d68b1d6b99abbe694d724ff59fa93a4512decacbbf7cae6ef319c0510b1",
+    "normal_nas_installer_change_scope": "accept exact tested KVM kernel; install systemd-container and fuse3 prerequisites; no EL2 activation",
+    "next_image_profile": "0.2.0-rc1 private validation candidate",
+    "optional_component_default_enabled": false
+  },
+  "windows_assistant": {
+    "source": "image/wizard.py",
+    "backend": "image/installer.py",
+    "normal_install_requires_physical_validation": true,
+    "normal_install_requires_binary_review": true,
+    "fastboot_product": "rubypro",
+    "test_profile_includes_linux_vbmeta": true,
+    "public_binary_release": false
   }
 }

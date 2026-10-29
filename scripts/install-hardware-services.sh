@@ -6,7 +6,10 @@ prefix=${DESTDIR:-}
 bundle=${REDMI_NAS_HARDWARE_BUNDLE:-$prefix/usr/share/redmi-nas-hardware}
 if [ -z "$prefix" ]; then
  test "$EUID" = 0
- test "$(uname -r)" = 4.19.191-g914ba8403bb3
+ case "$(uname -r)" in
+   4.19.191-g914ba8403bb3|4.19.191-g914ba8403bb3-dirty) ;;
+   *) echo 'The matching tested Redmi kernel is required.' >&2; exit 1 ;;
+ esac
 fi
 python3 - "$repo/hardware/runtime-lock.json" "$bundle" <<'PY'
 import hashlib,json,sys

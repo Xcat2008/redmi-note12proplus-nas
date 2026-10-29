@@ -8,7 +8,10 @@ desktop_user=${2:-}
 [[ "$desktop_user" =~ ^[a-z_][a-z0-9_-]*$ ]] || { echo 'Specify your Linux desktop user.' >&2; exit 2; }
 test "$EUID" = 0 || { echo 'Run with sudo.' >&2; exit 1; }
 test "$(uname -m)" = aarch64
-test "$(uname -r)" = 4.19.191-g914ba8403bb3
+case "$(uname -r)" in
+  4.19.191-g914ba8403bb3|4.19.191-g914ba8403bb3-dirty) ;;
+  *) echo 'The matching tested Redmi kernel is required.' >&2; exit 1 ;;
+esac
 test "$(cat /proc/1/comm)" = systemd
 grep -q '^13[.]' /etc/debian_version
 mountpoint -q /userdata
@@ -43,7 +46,7 @@ done
 export DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=l
 apt-get update
 apt-get install -y --no-remove --no-install-recommends postgresql-common
-apt-get install -y --no-remove --no-install-recommends ca-certificates curl gnupg git jq rsync python3 python3-gi build-essential libudev-dev tar xz-utils unzip procps postgresql postgresql-contrib openssl nginx samba smbclient cifs-utils avahi-daemon libnss-mdns
+apt-get install -y --no-remove --no-install-recommends ca-certificates curl gnupg git jq rsync python3 python3-gi build-essential libudev-dev tar xz-utils unzip procps postgresql postgresql-contrib openssl nginx samba smbclient cifs-utils avahi-daemon libnss-mdns systemd-container fuse3
 install -d -m755 /etc/apt/keyrings /etc/docker /userdata/docker /userdata/containerd
 curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
 chmod a+r /etc/apt/keyrings/docker.asc

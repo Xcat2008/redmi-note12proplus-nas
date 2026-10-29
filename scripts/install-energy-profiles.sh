@@ -8,7 +8,10 @@ target="$prefix/usr/local/libexec/redmi-nas"
 if [ -z "$prefix" ]; then
     test "$EUID" = 0
     test "$(uname -m)" = aarch64
-    test "$(uname -r)" = 4.19.191-g914ba8403bb3
+    case "$(uname -r)" in
+      4.19.191-g914ba8403bb3|4.19.191-g914ba8403bb3-dirty) ;;
+      *) echo 'The matching tested Redmi kernel is required.' >&2; exit 1 ;;
+    esac
 fi
 test -f "$prefix/usr/share/mps/mps.gresource"
 python3 - "$source_dir" <<'PY'

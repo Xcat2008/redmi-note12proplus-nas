@@ -67,4 +67,41 @@ class SetupFields(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'SSID'):personalize_usb.validate(fields)
 
 
+class ReleaseBoundary(unittest.TestCase):
+    def test_binary_review_required_even_after_physical_install(self):
+        with self.assertRaisesRegex(ValueError,'redistribution'):
+            installer.require_release({'physical_install_test_passed':True,'binary_redistribution_audit_passed':False})
+
+    def test_both_release_checks_pass(self):
+        installer.require_release({'physical_install_test_passed':True,'binary_redistribution_audit_passed':True})
+
+    def test_bad_personal_fields_do_not_generate_key(self):
+        with patch.object(installer.subprocess,'run') as run:
+            for args in [('12\nroot:bad','',''),('1234','Home\nOther','example-password'),('1234','Home','short')]:
+                with self.subTest(args=args),self.assertRaises(ValueError):installer.make_setup_fields(*args)
+            run.assert_not_called()
+
+
+class BootMetadataBoundary(unittest.TestCase):
+    def test_expected_product_matches_the_verified_recovery_path(self):
+        properties={'product':'rubypro','current-slot':'a','unlocked':'yes','partition-size:boot_a':'8000000','partition-size:userdata':hex(242019696640),'partition-size:vbmeta_a':'800000'}
+        with patch.object(installer.subprocess,'run',return_value=type('Result',(),{'stdout':'test-serial fastboot\n'})()),patch.object(installer,'getvar',side_effect=lambda exe,serial,name:properties[name]):
+            self.assertEqual(installer.device_preflight('fastboot',{'userdata_partition_bytes':242019696640,'requires_linux_vbmeta':True}),'test-serial')
+            properties['product']='ruby'
+            with self.assertRaisesRegex(ValueError,'rubypro'):installer.device_preflight('fastboot',{})
+
+    def test_vbmeta_flags_required(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path=Path(folder)/'vbmeta.img';data=bytearray(4096);data[:4]=b'AVB0';struct.pack_into('>I',data,120,3);path.write_bytes(data)
+            installer.validate_vbmeta(path)
+            struct.pack_into('>I',data,120,0);path.write_bytes(data)
+            with self.assertRaisesRegex(ValueError,'flags'):installer.validate_vbmeta(path)
+
+    def test_metadata_failure_stops_before_userdata_write(self):
+        with patch.object(installer,'command',side_effect=ValueError('failed')) as command:
+            with self.assertRaisesRegex(ValueError,'failed'):installer.flash_images('fastboot','test',Path('/test'),{'requires_linux_vbmeta':True})
+            self.assertEqual(command.call_count,1)
+            self.assertEqual(command.call_args.args[2:4],('flash','vbmeta_a'))
+
+
 if __name__=='__main__':unittest.main()

@@ -55,10 +55,20 @@ def inspect_package(folder):
         if not file.is_file() or file.stat().st_size!=spec['bytes'] or checksum(file)!=spec['sha256']:raise ValueError('File size/checksum mismatch: '+name)
     validate_sparse(folder/'userdata.img',manifest['userdata_filesystem_bytes'])
     if (folder/'boot.img').stat().st_size!=134217728:raise ValueError('Unexpected boot partition image size')
+    if manifest.get('requires_linux_vbmeta'):
+        spec=manifest['files']['vbmeta.img'];file=folder/'vbmeta.img'
+        if not file.is_file() or file.stat().st_size!=spec['bytes'] or checksum(file)!=spec['sha256']:raise ValueError('VBMeta size/checksum mismatch')
+        validate_vbmeta(file)
     print('Image checks passed. No device accessed or changed.',flush=True)
     return manifest
 
-def locate_fastboot(folder,provided):
+
+def validate_vbmeta(path):
+    data=path.read_bytes()
+    if len(data)!=4096 or data[:4]!=b'AVB0' or struct.unpack_from('>I',data,120)[0]!=3:
+        raise ValueError('Unexpected Linux VBMeta header or flags')
+
+def locate_fastboot(folder,provided,authorize_download=None):
     if provided:
         path=Path(provided).resolve()
         if path.is_file():return str(path)
@@ -70,7 +80,8 @@ def locate_fastboot(folder,provided):
     if os.name!='nt':raise ValueError('Install Android platform-tools first or use --fastboot PATH')
     print('Google Android Platform-Tools are required.')
     print('Download and license information: https://developer.android.com/tools/releases/platform-tools')
-    if input('Download the official Windows tools now? Type YES: ').strip()!='YES':raise ValueError('Platform-Tools download not authorized')
+    approved=authorize_download() if authorize_download is not None else input('Download the official Windows tools now? Type YES: ').strip()=='YES'
+    if not approved:raise ValueError('Platform-Tools download not authorized')
     cache=folder/'tools';cache.mkdir(exist_ok=True)
     archive=cache/'platform-tools.zip'
     urllib.request.urlretrieve(SDK_URL,archive)
@@ -98,7 +109,7 @@ def device_preflight(executable,manifest):
     devices=[line.split()[0] for line in found if len(line.split())>=2 and line.split()[1]=='fastboot']
     if len(devices)!=1:raise ValueError('Exactly one phone must be connected in FASTBOOT mode')
     serial=devices[0]
-    if getvar(executable,serial,'product')!='ruby':raise ValueError('Connected phone is not a ruby-family device')
+    if getvar(executable,serial,'product')!='rubypro':raise ValueError('Connected phone is not the tested rubypro device')
     if getvar(executable,serial,'current-slot')!='a':raise ValueError('This candidate requires the documented factory firmware active in slot a')
     try:unlocked=getvar(executable,serial,'unlocked').lower() in ['yes','true','1']
     except ValueError:
@@ -107,21 +118,49 @@ def device_preflight(executable,manifest):
     if not unlocked:raise ValueError('Bootloader must first be unlocked through Xiaomi')
     if int(getvar(executable,serial,'partition-size:boot_a'),16)!=134217728:raise ValueError('Unexpected boot_a partition size')
     if int(getvar(executable,serial,'partition-size:userdata'),16)!=manifest['userdata_partition_bytes']:raise ValueError('This candidate targets the documented256GB partition layout')
+    if manifest.get('requires_linux_vbmeta') and int(getvar(executable,serial,'partition-size:vbmeta_a'),16)!=8388608:raise ValueError('Unexpected vbmeta_a partition size')
     return serial
+
+
+def flash_images(executable,target,folder,manifest,capture=True):
+    if manifest.get('requires_linux_vbmeta'):
+        print('Writing Linux AVB metadata for the unlocked bootloader.',flush=True)
+        command(executable,target,'flash','vbmeta_a',str(folder/'vbmeta.img'),capture=capture)
+    print('Writing userdata. Do not disconnect the cable.',flush=True)
+    command(executable,target,'-S','128M','flash','userdata',str(folder/'userdata.img'),capture=capture)
+    print('Writing the boot image.',flush=True)
+    command(executable,target,'flash','boot_a',str(folder/'boot.img'),capture=capture)
+
+def make_setup_fields(pin,ssid='',password=''):
+    if not re.fullmatch(r'[0-9]{4,12}',pin):raise ValueError('PIN must contain 4-12 digits')
+    if ssid:
+        if not 1<=len(ssid.encode())<=32 or any(ord(c)<32 for c in ssid):raise ValueError('Invalid Wi-Fi name')
+        if not 8<=len(password)<=63 or any(ord(c)<32 for c in password):raise ValueError('Invalid WPA Wi-Fi password')
+    directory=Path.home()/'.redmi-nas';directory.mkdir(mode=0o700,exist_ok=True)
+    key=directory/('installer-'+uuid.uuid4().hex)
+    subprocess.run(['ssh-keygen','-q','-t','ed25519','-N','','-C','redmi-nas-installer','-f',str(key)],check=True)
+    public=key.with_suffix('.pub').read_text().strip()
+    fields={'pin':pin,'ssh_public_key':public}
+    if ssid:fields['wifi']={'ssid':ssid,'password':password}
+    return fields,key
+
 
 def personal_fields():
     while True:
         pin=getpass.getpass('Choose your own Linux/unlock PIN (4-12 digits): ')
         if re.fullmatch(r'[0-9]{4,12}',pin) and getpass.getpass('Repeat PIN: ')==pin:break
         print('PINs must match and contain4-12digits.')
-    directory=Path.home()/'.redmi-nas';directory.mkdir(mode=0o700,exist_ok=True)
-    key=directory/('installer-'+uuid.uuid4().hex)
-    subprocess.run(['ssh-keygen','-q','-t','ed25519','-N','','-C','redmi-nas-installer','-f',str(key)],check=True)
-    public=key.with_suffix('.pub').read_text().strip()
-    fields={'pin':pin,'ssh_public_key':public}
     ssid=input('Wi-Fi name (leave empty to configure on the phone): ').strip()
-    if ssid:fields['wifi']={'ssid':ssid,'password':getpass.getpass('Wi-Fi password: ')}
-    return fields,key
+    password=getpass.getpass('Wi-Fi password: ') if ssid else ''
+    return make_setup_fields(pin,ssid,password)
+
+
+def require_release(manifest,allow_untested=False):
+    if allow_untested:return
+    if not manifest.get('physical_install_test_passed'):
+        raise ValueError('This candidate has not passed a clean physical installation test. Normal installation is disabled; use a tested release.')
+    if not manifest.get('binary_redistribution_audit_passed'):
+        raise ValueError('This package has not passed the binary redistribution review. Normal installation is disabled.')
 
 def personalize(fields,timeout=240):
     import serial
@@ -162,7 +201,7 @@ def main():
         fields,key=personal_fields();personalize(fields);print('Setup completed. Keep your private SSH key at:',key);return
     manifest=inspect_package(folder)
     if not args.install:return
-    if not manifest.get('physical_install_test_passed') and not args.allow_untested:raise ValueError('This candidate has not passed a clean physical installation test. Normal installation is disabled; use a tested release.')
+    require_release(manifest,args.allow_untested)
     import serial  # fail before any device write if the dependency is absent
     executable=locate_fastboot(folder,args.fastboot)
     target=device_preflight(executable,manifest)
@@ -172,8 +211,7 @@ def main():
     if input('Confirm matching factory firmware version: ').strip()!=manifest['factory_firmware']:raise ValueError('Factory firmware not confirmed')
     if input('Type ERASE THIS PHONE to install: ').strip()!='ERASE THIS PHONE':raise ValueError('No erase authorized')
     fields,key=personal_fields()
-    command(executable,target,'-S','128M','flash','userdata',str(folder/'userdata.img'),capture=False)
-    command(executable,target,'flash','boot_a',str(folder/'boot.img'),capture=False)
+    flash_images(executable,target,folder,manifest,capture=False)
     command(executable,target,'reboot',capture=False)
     personalize(fields)
     print('Linux image installed and personalized. The NAS installs after internet is available.')

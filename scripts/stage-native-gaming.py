@@ -121,6 +121,7 @@ StandardError=append:/DATA/AppData/custom-steam/logs/steam-startup.log
 WantedBy=multi-user.target
 ''')
  source('apps/steam/enter-session','/usr/local/lib/redmi-nas/steam/enter-session',0o755)
+ source('apps/steam/70-redmi-steam-input.rules','/etc/udev/rules.d/70-redmi-steam-input.rules')
  source('apps/steam/redmi-steam-recover','/usr/local/sbin/redmi-steam-recover',0o755)
  text('/etc/geoclue/conf.d/99-redmi-nas-no-wifi-location.conf','[wifi]\nenable=false\n')
  text('/etc/NetworkManager/conf.d/95-redmi-nas-unused-wifi.conf','[device-redmi-nas-unused-wifi]\nmatch-device=interface-name:wlan1;interface-name:ap0\nmanaged=0\n')

@@ -6,6 +6,8 @@ The running Redmi has Proxmox VE 9.2.20 in an isolated `systemd-nspawn` environm
 
 Read the [installation boundary, architecture and validation](../../docs/PROXMOX.md) first. Installing the Proxmox packages does not enable EL2 or turn the existing NAS candidate into a KVM image.
 
+The next 0.2 validation candidate stages clean packages with `prepare-profile.py` and includes the guarded `setup-preloaded.py` helper. They preserve an existing NAS/account database, leave the PVE service disabled by default and do not activate EL2. The complete fresh-device installation and full phone reboot still need validation; these helpers are not a released one-click platform installer.
+
 ## Included
 
 | File | Purpose |

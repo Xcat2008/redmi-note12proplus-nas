@@ -8,6 +8,7 @@ import struct
 import subprocess
 import tempfile
 import unittest
+from unittest.mock import patch
 
 ROOT=Path(__file__).resolve().parents[1]
 
@@ -21,6 +22,8 @@ def module(name,path):
 
 firmware=module('pve_firmware',ROOT/'runtime/firmware_compat.py')
 preflight=module('pve_preflight',ROOT/'preflight.py')
+setup=module('pve_setup_preloaded',ROOT/'setup-preloaded.py')
+prepare=module('pve_prepare_profile',ROOT/'prepare-profile.py')
 
 
 def fixture(offset=16,destination=64):
@@ -70,6 +73,26 @@ class ProfileBoundary(unittest.TestCase):
         result=subprocess.run(['bash',str(ROOT/'apply-existing.sh'),'--apply'],capture_output=True,text=True)
         self.assertNotEqual(result.returncode,0)
         self.assertIn('"configuration_written": false',result.stdout)
+
+
+class CleanImageBoundary(unittest.TestCase):
+    def test_missing_el2_never_starts_component_or_extracts_root(self):
+        with patch.object(setup,'preflight',return_value=['Hardware KVM unavailable']),patch.object(setup,'unpack') as unpack,patch.object(setup.subprocess,'run') as run:
+            with self.assertRaisesRegex(ValueError,'KVM'):setup.enable('test-password')
+            unpack.assert_not_called();run.assert_not_called()
+
+    def test_wrong_cpu_and_kernel_refused(self):
+        self.assertEqual(setup.capability_errors('aarch64','4.19.191-g914ba8403bb3-dirty',[0xd05]*6+[0xd41]*2,12),[])
+        for args in [('x86_64','4.19.191-g914ba8403bb3-dirty',[0xd05]*6+[0xd41]*2,12),('aarch64','6.12',[0xd05]*6+[0xd41]*2,12),('aarch64','4.19.191-g914ba8403bb3-dirty',[0xd41]*8,12)]:
+            self.assertTrue(setup.capability_errors(*args))
+
+    def test_personalized_image_is_not_reconfigured(self):
+        with tempfile.TemporaryDirectory() as folder:
+            host=Path(folder)/'host';guest=Path(folder)/'guest'
+            (guest/'usr/bin').mkdir(parents=True);(guest/'usr/bin/pvesh').touch()
+            (host/'var/lib/redmi-nas').mkdir(parents=True);(host/'var/lib/redmi-nas/personalized').touch()
+            with self.assertRaisesRegex(ValueError,'personalized'):prepare.configure(host,guest)
+            self.assertFalse((guest/'etc/hostname').exists())
 
 
 @unittest.skipUnless(shutil.which('gcc') and platform.system()=='Linux','requires Linux compiler')

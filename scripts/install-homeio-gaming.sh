@@ -3,7 +3,10 @@
 set -Eeuo pipefail
 test "$EUID" = 0
 test "$(uname -m)" = aarch64
-test "$(uname -r)" = 4.19.191-g914ba8403bb3
+case "$(uname -r)" in
+  4.19.191-g914ba8403bb3|4.19.191-g914ba8403bb3-dirty) ;;
+  *) echo 'The matching tested Redmi kernel is required.' >&2; exit 1 ;;
+esac
 repo=$(cd "$(dirname "$0")/.." && pwd)
 source_dir="$repo/apps/retroarch"
 state=/var/lib/redmi-retroarch-homeio

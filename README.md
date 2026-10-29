@@ -47,13 +47,15 @@ The consolidated [native gaming profile](docs/NATIVE-GAMING.md) adds independent
 
 The configured Redmi now runs **Proxmox VE 9.2.20 ARM64 with hardware KVM**. A full Debian 13 guest with eight vCPUs passed calculation on all eight physical cores, disk persistence, private networking, web-console and restart checks. The old kernel's mixed-cluster cache mismatch is handled by the scoped QEMU compatibility adapter.
 
-The [Proxmox guide](docs/PROXMOX.md) and [compatibility source](apps/proxmox/README.md) are public. This remains an **experimental optional profile**: the existing clean image candidate does not contain it, and a fresh unattended installation is not released. The NAS reboot result above predates this KVM profile; its full phone reboot is still pending validation.
+The [Proxmox guide](docs/PROXMOX.md) and [compatibility source](apps/proxmox/README.md) are public. This remains an **experimental optional profile**: rc7 does not contain it; the next 0.2 candidate preloads a clean, disabled Proxmox base and matching KVM kernel/modules. Fresh EL2 activation and unattended installation are not released. The NAS reboot result above predates this KVM profile; its full phone reboot is still pending validation.
 
 ## Release status
 
 **Developer preview. The NAS runs on the project device. A clean boot/data image and a guarded Windows installer have also been built, but still need a complete physical installation test before a public binary release.**
 
 The original device has been tested, but the public procedure has not yet been repeated on a second clean phone. The candidate uses individual setup credentials rather than a copy of the author’s configured system. Read the [installer status](docs/IMAGE-INSTALLER.md) and [installation guide](docs/INSTALLATION.md) before deciding to replicate it.
+
+The [Windows assistant guide](docs/INSTALL-WIZARD.pt-PT.md) describes the intended download, verification and setup flow. The graphical installer keeps unapproved candidates blocked. First setup still needs Internet for upstream programs; this is not a fully offline image.
 
 | Capability | Result on the project device |
 | --- | --- |

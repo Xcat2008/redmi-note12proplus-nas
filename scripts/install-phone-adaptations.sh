@@ -5,7 +5,10 @@ test "$EUID" = 0 || { echo 'Run with sudo.' >&2; exit 1; }
 desktop_user=${1:?Usage: sudo bash install-phone-adaptations.sh DESKTOP_USER}
 [[ $desktop_user =~ ^[a-z_][a-z0-9_-]*$ ]] || exit 1
 desktop_uid=$(id -u "$desktop_user")
-test "$(uname -r)" = 4.19.191-g914ba8403bb3 || { echo 'This adaptation targets the documented ruby NAS kernel.' >&2; exit 1; }
+case "$(uname -r)" in
+  4.19.191-g914ba8403bb3|4.19.191-g914ba8403bb3-dirty) ;;
+  *) echo 'The matching tested Redmi kernel is required.' >&2; exit 1 ;;
+esac
 test -S "/run/user/$desktop_uid/bus" || { echo 'Start the Phosh user session first.' >&2; exit 1; }
 repo=$(cd "$(dirname "$0")/.." && pwd)
 backup="/var/backups/redmi-nas/$(date -u +%Y%m%dT%H%M%SZ)-$$"

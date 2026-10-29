@@ -4,6 +4,8 @@ O objetivo é descarregar um pacote, abrir o assistente no Windows e deixar a co
 
 **Estado atual: candidato de testes. Ainda não há uma versão aprovada para instalação pública.** O assistente permite verificar o pacote, mas mantém a instalação normal bloqueada enquanto faltarem o teste físico de raiz e a revisão de distribuição. A existência de um `.exe` não significa que esses testes já passaram.
 
+O primeiro teste supervisionado apagou e reinstalou o telefone do projeto, com autorização do proprietário. A personalização USB, o Wi-Fi e o Homeio arrancaram; esse teste revelou dependências e uma ordem de arranque que estão agora corrigidas no código. A instalação completa sem intervenções ainda precisa de ser repetida com a candidata corrigida.
+
 ## O telefone certo
 
 Este perfil destina-se exclusivamente ao **Redmi Note 12 Pro+ 5G, modelo 22101316UG, 256 GB**, com firmware de origem **OS2.0.16.0.UMOEUXM**, slot `a`, e bootloader desbloqueado pela Xiaomi. O nome comercial, por si só, não chega: os modelos 4G, outras capacidades e outras variantes não estão validados.
@@ -17,7 +19,7 @@ O desbloqueio e a instalação apagam dados. Guarda os ficheiros e dados das apl
 3. Abre **RedmiNAS-Setup.exe**. Escolhe a pasta extraída e carrega em **Verificar**. O assistente confere tamanho, SHA-256 e estrutura das imagens, sem contactar o telefone.
 4. Preenche o modelo e o firmware exigidos. Escolhe o teu PIN Linux e, se quiseres, os dados do Wi-Fi. O assistente cria uma chave SSH nova no teu computador; não vem uma palavra-passe do autor.
 5. Desliga outros telefones do PC. No Redmi destinado à instalação, entra em **FASTBOOT** com Ligar + Volume − e liga-o diretamente por USB, sem o hub. O assistente exige um único telefone e verifica o produto, slot, desbloqueio e tamanhos das partições.
-6. Lê e aceita a confirmação de apagamento. Carrega em **Instalar no telefone**. Se forem necessárias as Platform-Tools, o assistente pede autorização para descarregar as ferramentas oficiais da Google. O perfil de teste verifica também a partição `vbmeta_a` e grava os metadados AVB previstos para Linux, além de `userdata` e `boot_a`. Não desligues o cabo nem feches o assistente durante a gravação.
+6. Lê e aceita a confirmação de apagamento. Carrega em **Instalar no telefone**. Se forem necessárias as Platform-Tools, o assistente pede autorização para descarregar as ferramentas oficiais da Google. O instalador grava `userdata` e `boot_a` e preserva os metadados AVB do firmware original exigido. Não desligues o cabo nem feches o assistente durante a gravação.
 7. O Linux arranca e recebe a configuração pelo USB. Mantém o telefone alimentado e com acesso à Internet: o primeiro arranque descarrega os pacotes e configura a NAS. Não há contas Steam, jogos, BIOS, ficheiros pessoais ou emparelhamentos incluídos.
 8. Abre **http://redmi-nas.local** no PC da mesma rede e cria a tua conta Homeio. Se o nome não resolver, consulta o endereço do telefone na lista de dispositivos do router.
 
@@ -29,7 +31,7 @@ Mantém o cabo ligado e usa **Retomar configuração USB** no assistente. Esta o
 
 Se a gravação falhar, guarda o erro apresentado e conserva o telefone em FASTBOOT. Não experimentes ficheiros de outros modelos nem voltes a bloquear o bootloader. Uma NAS instalada usa `userdata` em ext4; restaurar apenas a imagem de arranque Android não devolve o telefone ao estado de fábrica. Para recuperação completa é necessário o firmware oficial correspondente ao modelo/região e um procedimento validado para esse aparelho.
 
-O `vbmeta.img` da candidata é gerado com a ferramenta AOSP, sem imagens proprietárias de outro telefone, e desativa a verificação AVB para este arranque Linux com bootloader desbloqueado. Não é uma assinatura de confiança da Xiaomi. A combinação de arranque ainda precisa do teste físico de instalação limpa; a validação estrutural feita no PC não o substitui. Os conceitos e as opções de verificação são descritos na [documentação AOSP](https://source.android.com/docs/core/tests/vts/gsi).
+Os metadados AVB do fabricante devem manter-se intactos. O teste físico do perfil 0.2.0-rc1 falhou quando estes foram substituídos por um `vbmeta.img` vazio e genérico; o mesmo novo arranque funcionou ao conservar os originais. Esse perfil foi retirado e o cliente corrigido rejeita-o antes de escrever dados. O bootloader continua a ter de estar desbloqueado, e o firmware original tem de corresponder exatamente ao indicado. A imagem de arranque Linux não tem uma assinatura de confiança da Xiaomi. A instalação limpa completa continua a exigir validação física; a verificação estrutural no PC não a substitui.
 
 ## O que está incluído
 

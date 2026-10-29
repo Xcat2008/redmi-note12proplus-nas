@@ -49,24 +49,20 @@ def validate_sparse(path,expected_size):
 def inspect_package(folder):
     manifest=json.loads((folder/'installer-manifest.json').read_text(encoding='utf-8'))
     if manifest.get('model')!='22101316UG':raise ValueError('Wrong installer model')
+    require_factory_avb(manifest)
     for name in ['boot.img','userdata.img']:
         spec=manifest['files'][name];file=folder/name
         print('Verifying',name,flush=True)
         if not file.is_file() or file.stat().st_size!=spec['bytes'] or checksum(file)!=spec['sha256']:raise ValueError('File size/checksum mismatch: '+name)
     validate_sparse(folder/'userdata.img',manifest['userdata_filesystem_bytes'])
     if (folder/'boot.img').stat().st_size!=134217728:raise ValueError('Unexpected boot partition image size')
-    if manifest.get('requires_linux_vbmeta'):
-        spec=manifest['files']['vbmeta.img'];file=folder/'vbmeta.img'
-        if not file.is_file() or file.stat().st_size!=spec['bytes'] or checksum(file)!=spec['sha256']:raise ValueError('VBMeta size/checksum mismatch')
-        validate_vbmeta(file)
     print('Image checks passed. No device accessed or changed.',flush=True)
     return manifest
 
 
-def validate_vbmeta(path):
-    data=path.read_bytes()
-    if len(data)!=4096 or data[:4]!=b'AVB0' or struct.unpack_from('>I',data,120)[0]!=3:
-        raise ValueError('Unexpected Linux VBMeta header or flags')
+def require_factory_avb(manifest):
+    if manifest.get('requires_linux_vbmeta'):
+        raise ValueError('This retired candidate replaces factory AVB metadata and failed physical boot validation. Use a corrected package that preserves factory AVB.')
 
 def locate_fastboot(folder,provided,authorize_download=None):
     if provided:
@@ -105,6 +101,7 @@ def getvar(executable,serial,name):
     return match.group(1)
 
 def device_preflight(executable,manifest):
+    require_factory_avb(manifest)
     found=subprocess.run([executable,'devices'],capture_output=True,text=True,check=True).stdout.splitlines()
     devices=[line.split()[0] for line in found if len(line.split())>=2 and line.split()[1]=='fastboot']
     if len(devices)!=1:raise ValueError('Exactly one phone must be connected in FASTBOOT mode')
@@ -118,14 +115,11 @@ def device_preflight(executable,manifest):
     if not unlocked:raise ValueError('Bootloader must first be unlocked through Xiaomi')
     if int(getvar(executable,serial,'partition-size:boot_a'),16)!=134217728:raise ValueError('Unexpected boot_a partition size')
     if int(getvar(executable,serial,'partition-size:userdata'),16)!=manifest['userdata_partition_bytes']:raise ValueError('This candidate targets the documented256GB partition layout')
-    if manifest.get('requires_linux_vbmeta') and int(getvar(executable,serial,'partition-size:vbmeta_a'),16)!=8388608:raise ValueError('Unexpected vbmeta_a partition size')
     return serial
 
 
 def flash_images(executable,target,folder,manifest,capture=True):
-    if manifest.get('requires_linux_vbmeta'):
-        print('Writing Linux AVB metadata for the unlocked bootloader.',flush=True)
-        command(executable,target,'flash','vbmeta_a',str(folder/'vbmeta.img'),capture=capture)
+    require_factory_avb(manifest)
     print('Writing userdata. Do not disconnect the cable.',flush=True)
     command(executable,target,'-S','128M','flash','userdata',str(folder/'userdata.img'),capture=capture)
     print('Writing the boot image.',flush=True)

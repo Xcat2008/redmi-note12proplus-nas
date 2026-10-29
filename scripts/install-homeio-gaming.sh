@@ -134,6 +134,10 @@ nginx -t
 systemctl reload nginx
 systemctl daemon-reload
 systemctl enable --now redmi-retroarch-homeio.service
+# The initial image download/build can exceed the store's compose-operation
+# timeout on a clean phone. Complete it here before queuing the store install.
+docker build --tag redmi-nas/retroarch-sunshine:2026.10.26 \
+ /usr/local/share/redmi-nas/gaming
 cd /opt/home-server
 exec node --conditions=react-server --env-file=.env --import tsx \
  nas-register-homeio-gaming.ts "$@"

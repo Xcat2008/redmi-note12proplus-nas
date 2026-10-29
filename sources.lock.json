@@ -189,7 +189,7 @@
     "kernel_resolved_config": "kernel/kvm/linux-resolved.config",
     "kernel_resolved_config_sha256": "ce4f7d68b1d6b99abbe694d724ff59fa93a4512decacbbf7cae6ef319c0510b1",
     "normal_nas_installer_change_scope": "accept exact tested KVM kernel; install systemd-container and fuse3 prerequisites; no EL2 activation",
-    "next_image_profile": "0.2.0-rc1 private validation candidate",
+    "next_image_profile": "0.2.0-rc2 private validation candidate",
     "optional_component_default_enabled": false
   },
   "windows_assistant": {
@@ -198,7 +198,8 @@
     "normal_install_requires_physical_validation": true,
     "normal_install_requires_binary_review": true,
     "fastboot_product": "rubypro",
-    "test_profile_includes_linux_vbmeta": true,
-    "public_binary_release": false
+    "test_profile_includes_linux_vbmeta": false,
+    "public_binary_release": false,
+    "preserves_required_factory_avb": true
   }
 }

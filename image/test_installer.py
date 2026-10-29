@@ -86,22 +86,27 @@ class BootMetadataBoundary(unittest.TestCase):
     def test_expected_product_matches_the_verified_recovery_path(self):
         properties={'product':'rubypro','current-slot':'a','unlocked':'yes','partition-size:boot_a':'8000000','partition-size:userdata':hex(242019696640),'partition-size:vbmeta_a':'800000'}
         with patch.object(installer.subprocess,'run',return_value=type('Result',(),{'stdout':'test-serial fastboot\n'})()),patch.object(installer,'getvar',side_effect=lambda exe,serial,name:properties[name]):
-            self.assertEqual(installer.device_preflight('fastboot',{'userdata_partition_bytes':242019696640,'requires_linux_vbmeta':True}),'test-serial')
+            self.assertEqual(installer.device_preflight('fastboot',{'userdata_partition_bytes':242019696640,'requires_linux_vbmeta':False}),'test-serial')
             properties['product']='ruby'
             with self.assertRaisesRegex(ValueError,'rubypro'):installer.device_preflight('fastboot',{})
 
-    def test_vbmeta_flags_required(self):
-        with tempfile.TemporaryDirectory() as folder:
-            path=Path(folder)/'vbmeta.img';data=bytearray(4096);data[:4]=b'AVB0';struct.pack_into('>I',data,120,3);path.write_bytes(data)
-            installer.validate_vbmeta(path)
-            struct.pack_into('>I',data,120,0);path.write_bytes(data)
-            with self.assertRaisesRegex(ValueError,'flags'):installer.validate_vbmeta(path)
+    def test_retired_empty_vbmeta_candidate_rejected_before_device_access(self):
+        with patch.object(installer.subprocess,'run') as run:
+            with self.assertRaisesRegex(ValueError,'failed physical boot'):
+                installer.device_preflight('fastboot',{'requires_linux_vbmeta':True})
+            run.assert_not_called()
 
-    def test_metadata_failure_stops_before_userdata_write(self):
-        with patch.object(installer,'command',side_effect=ValueError('failed')) as command:
-            with self.assertRaisesRegex(ValueError,'failed'):installer.flash_images('fastboot','test',Path('/test'),{'requires_linux_vbmeta':True})
-            self.assertEqual(command.call_count,1)
-            self.assertEqual(command.call_args.args[2:4],('flash','vbmeta_a'))
+    def test_retired_metadata_profile_cannot_erase_userdata(self):
+        with patch.object(installer,'command') as command:
+            with self.assertRaisesRegex(ValueError,'factory AVB'):installer.flash_images('fastboot','test',Path('/test'),{'requires_linux_vbmeta':True})
+            command.assert_not_called()
+
+    def test_corrected_flash_preserves_factory_metadata(self):
+        with patch.object(installer,'command') as command:
+            installer.flash_images('fastboot','test',Path('/test'),{'requires_linux_vbmeta':False})
+            self.assertEqual(command.call_count,2)
+            operations=[call.args[2:] for call in command.call_args_list]
+            self.assertEqual(operations,[('-S','128M','flash','userdata',str(Path('/test/userdata.img'))),('flash','boot_a',str(Path('/test/boot.img')))])
 
 
 if __name__=='__main__':unittest.main()

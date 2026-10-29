@@ -46,7 +46,7 @@ done
 export DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=l
 apt-get update
 apt-get install -y --no-remove --no-install-recommends postgresql-common
-apt-get install -y --no-remove --no-install-recommends ca-certificates curl gnupg git jq rsync python3 python3-gi build-essential libudev-dev tar xz-utils unzip procps postgresql postgresql-contrib openssl nginx samba smbclient cifs-utils avahi-daemon libnss-mdns systemd-container fuse3
+apt-get install -y --no-remove --no-install-recommends ca-certificates curl gnupg git jq rsync python3 python3-gi dconf-cli wireless-tools build-essential libudev-dev tar xz-utils unzip procps postgresql postgresql-contrib openssl nginx samba smbclient cifs-utils avahi-daemon libnss-mdns systemd-container fuse3
 install -d -m755 /etc/apt/keyrings /etc/docker /userdata/docker /userdata/containerd
 curl -fsSL https://download.docker.com/linux/debian/gpg -o /etc/apt/keyrings/docker.asc
 chmod a+r /etc/apt/keyrings/docker.asc

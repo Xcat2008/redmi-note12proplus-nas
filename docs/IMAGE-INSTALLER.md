@@ -21,7 +21,7 @@ A clean candidate has been assembled separately from the author’s working NAS.
 | Windows installer | Graphical assistant and CLI built; candidate installation remains blocked, verification does not contact the phone |
 | Model, unlocked bootloader, slot and partition-layout checks | Implemented |
 | Proxmox / eight-CPU KVM profile | Tested on the configured device. Absent from rc7; the next 0.2 candidate preloads clean userspace and matching KVM modules, disabled by default. Fresh EL2 activation and installation remain unvalidated. |
-| Clean physical install, Wi-Fi onboarding, first NAS setup | Pending |
+| Clean physical install, Wi-Fi onboarding, first NAS setup | Supervised test on the project phone reached Homeio registration; bootstrap corrections are being integrated and the full unattended rerun is pending |
 | Complete binary redistribution and corresponding-source audit | Pending before public binaries |
 
 The rc7 integration consolidates the current native gaming, mobile telemetry,
@@ -29,8 +29,10 @@ optional memory/battery controls, Wi-Fi scan compatibility, quiet GPU logging
 and USB console reboot fix. Its Homeio overlay was built from a fresh v1.10.3
 checkout. The distribution Mali backend passed device creation, synthetic-frame
 presentation and window resizing on the actual GPU. The accepted emulator bridge
-is retained unchanged. See [the validation scope](NATIVE-GAMING.md); no live user
-installation is erased to produce or audit the candidate.
+is retained unchanged. See [the validation scope](NATIVE-GAMING.md). Images are
+built from unpersonalized sources. A later supervised installation test erased
+the project phone with its owner's permission; its personalized filesystem is
+never used as the distribution image.
 
 The candidate includes `/usr/local/lib/redmi-nas/mediatek`, its source, startup profile and the Homeio installation hook. New installations receive the hardware video bridge, persistent Bluetooth adaptation and RetroArch profile automatically; no personal Jellyfin account, copied library, controller pairing or media file is included. The video bridge uses MediaTek decoding and encoding with Mali resizing for the tested SDR formats.
 
@@ -40,7 +42,7 @@ The target is specifically **22101316UG / rubypro, 256 GB**, using the documente
 
 ## Proxmox image boundary
 
-The [experimental KVM/Proxmox profile](PROXMOX.md) was validated after **0.1.0-rc7** was assembled. The next **0.2.0-rc1** build adds a clean Proxmox package base, the eight-CPU cache adapter, UEFI adaptation and matching KVM kernel/modules. Its optional service starts disabled, with no author password, account database or VM. It is a separate validation candidate, not a public approved replacement for rc7.
+The [experimental KVM/Proxmox profile](PROXMOX.md) was validated after **0.1.0-rc7** was assembled. The **0.2** candidates add a clean Proxmox package base, the eight-CPU cache adapter, UEFI adaptation and matching KVM kernel/modules. Its optional service starts disabled, with no author password, account database or VM. The rc1 empty-VBMeta profile was retired after its physical boot failure; rc2 preserves the required factory AVB metadata. It remains a validation candidate, not a public approved replacement for rc7.
 
 The normal NAS installer does not activate EL2 or change the phone's partition metadata. A fresh device without actual EL2 cannot use hardware KVM merely because the new kernel and packages are present. `setup-preloaded.py` checks that capability before starting the optional environment; `prepare-profile.py` stages only separate, unpersonalized build roots. These helpers do not make the whole fresh platform installation validated.
 
@@ -56,7 +58,7 @@ Proxmox is proposed as an optional component for the next compatible profile. A 
 6. Complete one-time setup over the physical USB connection and configure Wi-Fi.
 7. Once internet is available, first-boot services install the pinned NAS stack. Open Homeio from another computer and create a separate web account.
 
-The graphical assistant blocks installation until both the physical validation and binary redistribution checks pass. Its CLI expert override is for supervised testing, not a recommended shortcut. The 0.2 test profile also checks and supplies Linux AVB metadata for the unlocked bootloader; this change still needs physical first-install validation. See the [complete Windows user guide](INSTALL-WIZARD.pt-PT.md).
+The graphical assistant blocks installation until both the physical validation and binary redistribution checks pass. Its CLI expert override is for supervised testing, not a recommended shortcut. The 0.2.0-rc1 empty-VBMeta profile failed its physical boot test and is retired: the same clean boot image returned successfully with the factory AVB metadata preserved. The corrected client rejects that retired profile before any device write and flashes only userdata and boot_a. Full clean-install validation remains separate from that isolated boot test. See the [complete Windows user guide](INSTALL-WIZARD.pt-PT.md).
 
 ## Source
 

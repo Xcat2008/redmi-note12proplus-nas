@@ -17,6 +17,8 @@ jobs:
       - run: npm test
       - name: Installer offline checks
         run: python3 -m unittest discover -s image -v
+      - name: Fresh phone kernel module selection
+        run: python3 -m unittest discover -s kernel/kvm -p 'test*.py' -v
       - name: Native Steam bootstrap safety checks
         run: python3 -m unittest discover -s apps/steam -p 'test*.py' -v
       - name: Proxmox compatibility regression checks

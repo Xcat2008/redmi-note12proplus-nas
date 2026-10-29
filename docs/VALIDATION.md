@@ -38,3 +38,7 @@ The native power manager now applies and persists the three CPU profiles, uses s
 ## 27 October stability and gaming update
 
 The later native Vulkan/PS2 work, ordinary reboot fixes, thermal observations and remaining microstutters are recorded in [PERFORMANCE.md](PERFORMANCE.md). Physical Xbox pairing and input have now been confirmed on the development device; independent clean-install validation remains pending.
+
+## Experimental Proxmox/KVM profile
+
+The [Proxmox guide](PROXMOX.md) records the separate 29 October 2026 validation: eight-vCPU Debian ARM64, work on all eight physical CPUs, disk persistence, DHCP/DNS/HTTPS, guest agent, serial web console, guest/environment restarts and package-maintenance hooks. The two eight-second calculation runs are functional regression checks, not endurance certification. The earlier NAS reboot result does not certify the new KVM kernel/platform. Fresh KVM installation, full phone reboot, nested LXC, Windows ARM and GPU passthrough are still pending. See the [sanitized test scope](../apps/proxmox/validation.json).

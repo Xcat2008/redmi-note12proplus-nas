@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: GPL-2.0-only
+# Experimental KVM configuration from the tested ruby kernel output.
+# This fragment cannot enable EL2 when the boot chain does not provide it.
+CONFIG_ARM64_VHE=y
+CONFIG_KVM_MMIO=y
+CONFIG_KVM_VFIO=y
+CONFIG_KVM_GENERIC_DIRTYLOG_READ_PROTECT=y
+CONFIG_VIRTUALIZATION=y
+CONFIG_KVM=y
+CONFIG_KVM_ARM_HOST=y
+CONFIG_KVM_ARM_PMU=y
+CONFIG_KVM_INDIRECT_VECTORS=y

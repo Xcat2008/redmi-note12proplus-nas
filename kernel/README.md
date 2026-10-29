@@ -15,6 +15,10 @@ The source layout links `vendor/mediatek/kernel_modules` to ruby modules, with t
 
 Kernel/module material retains GPL-2.0-only and upstream per-file notices. The public host wrappers have syntax checks; this package has not yet been rebuilt from an entirely empty build directory.
 
+## Experimental KVM configuration
+
+`kvm/experimental.config.fragment` records the virtualization options used by the tested KVM build. It is not an EL2 activation method or a flashable kernel. All matching device modules must be rebuilt for the actual output. The [Proxmox profile](../docs/PROXMOX.md) is separate from the earlier NAS candidate, and no generic Proxmox kernel should replace the phone kernel. Its full physical phone reboot and clean installation remain unvalidated.
+
 ## Later stability baseline
 
 The tested follow-up changes three routine GPU/ION log sites with `quiet-normal-gpu-sync.patch`. [Runtime policies](runtime/README.md) address the vendor debug override and ttyGS0 shutdown stalls. The existing kernel configuration and exported module CRC table were retained. These sources are documented separately from the original image candidate; see [validation limits](../docs/PERFORMANCE.md).

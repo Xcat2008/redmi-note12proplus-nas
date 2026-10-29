@@ -153,5 +153,38 @@
       "commit": "2b9a7e936fd40969c650c26ed10f1a4078b8f246"
     },
     "clean_image_integration": "pending"
+  },
+  "proxmox_experimental": {
+    "status": "validated-on-configured-device-source-preview",
+    "pve_manager": "9.2.20",
+    "official_packages": "https://download.proxmox.com/debian/pve/",
+    "architecture": "arm64",
+    "kernel_release": "4.19.191-g914ba8403bb3-dirty",
+    "kernel_config_fragment": "kernel/kvm/experimental.config.fragment",
+    "kernel_config_fragment_sha256": "004eb5b5b9212c1b6252ecd7e8572064eb7582c0b92f4badd80ff25c5a729b26",
+    "requires_actual_el2": true,
+    "platform_activation_installer_published": false,
+    "profile_source": "apps/proxmox",
+    "validation_scope": "apps/proxmox/validation.json",
+    "cache_adapter_source_sha256": "548402e277d3666abba73561d496c3b5721fd0a877f138789cde4e9abf996d55",
+    "edk2_vendor_code_sha256": "3f9b9b65fa6e5b31b67e7b6a8f8142b6df7c1afe0255ef9cc3b6431678ea8611",
+    "allowed_physical_cpus": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "memory_limit_gib": 3,
+    "swap_limit_gib": 1,
+    "clean_image_candidate_includes_profile": false,
+    "fresh_install_verified": false,
+    "full_phone_reboot_verified": false,
+    "normal_nas_installer_changed": false,
+    "distribution_plan": "optional component after compatible platform and clean installation validation",
+    "maintenance_updater_scope": "existing isolated PVE profile only; not a bootstrap or kernel installer"
   }
 }

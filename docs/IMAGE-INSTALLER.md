@@ -20,6 +20,7 @@ A clean candidate has been assembled separately from the author’s working NAS.
 | Per-installation Linux PIN and SSH key | Implemented; no shared default credentials |
 | Windows installer | Built; default operation only verifies the package |
 | Model, unlocked bootloader, slot and partition-layout checks | Implemented |
+| Proxmox / eight-CPU KVM profile | Tested on the configured device; compatibility source published separately; not included in this candidate |
 | Clean physical install, Wi-Fi onboarding, first NAS setup | Pending |
 | Complete binary redistribution and corresponding-source audit | Pending before public binaries |
 
@@ -36,6 +37,12 @@ The candidate includes `/usr/local/lib/redmi-nas/mediatek`, its source, startup 
 The gaming setup installs RetroArch and Sunshine as a Homeio-managed stack during the internet-connected first setup. It downloads pinned upstream packages and builds the local container image. Homeio's normal context menu starts, stops or uninstalls the stack. The phone's application menu is not used for this workflow. The native renderer uses Mali; browser capture and Sunshine currently encode video on the CPU. See [the gaming integration](../apps/retroarch/README.md).
 
 The target is specifically **22101316UG / rubypro, 256 GB**, using the documented factory firmware **OS2.0.16.0.UMOEUXM** and slot **a**. This is not an image for the 4G model, another Redmi, or an arbitrary partition layout.
+
+## Proxmox image boundary
+
+The [experimental KVM/Proxmox profile](PROXMOX.md) was validated after this candidate was assembled. Its eight-CPU cache adapter, UEFI adaptation and matching KVM platform are not included in the previous boot/data files. The normal NAS installer does not activate EL2, alter boot metadata or install Proxmox by default.
+
+Proxmox is proposed as an optional component for the next compatible profile. A fresh image must be rebuilt from clean sources, receive individual setup credentials and pass the platform activation, clean-install and full-phone-reboot checks before it can be described as preinstalled. None of the candidate's physical-validation or redistribution flags has been enabled by the source publication.
 
 ## Intended installation flow
 

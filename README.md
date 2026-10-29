@@ -43,6 +43,12 @@ The source update adds native Mali Vulkan presentation, CPU-tier placement, boun
 
 The consolidated [native gaming profile](docs/NATIVE-GAMING.md) adds independent Steam launch, update/recovery handling and clean-image setup. Another unattended full NAS reboot passed on 28 October 2026. The candidate remains a developer validation build.
 
+## Proxmox and hardware virtual machines
+
+The configured Redmi now runs **Proxmox VE 9.2.20 ARM64 with hardware KVM**. A full Debian 13 guest with eight vCPUs passed calculation on all eight physical cores, disk persistence, private networking, web-console and restart checks. The old kernel's mixed-cluster cache mismatch is handled by the scoped QEMU compatibility adapter.
+
+The [Proxmox guide](docs/PROXMOX.md) and [compatibility source](apps/proxmox/README.md) are public. This remains an **experimental optional profile**: the existing clean image candidate does not contain it, and a fresh unattended installation is not released. The NAS reboot result above predates this KVM profile; its full phone reboot is still pending validation.
+
 ## Release status
 
 **Developer preview. The NAS runs on the project device. A clean boot/data image and a guarded Windows installer have also been built, but still need a complete physical installation test before a public binary release.**
@@ -54,7 +60,7 @@ The original device has been tested, but the public procedure has not yet been r
 | Native Linux boot and systemd | Working |
 | Wi-Fi and automatic reconnect | Working |
 | Homeio browser desktop | Working |
-| Automatic NAS startup after reboot | Working |
+| Automatic NAS startup after reboot | Verified on the NAS baseline; full phone reboot of the experimental KVM profile pending |
 | NAS stays available with display off | Working after the mobile-power-saver fix |
 | Docker ARM64 container | Working |
 | Jellyfin | Real 1080p → 720p browser playback with hardware decode, Mali resize and hardware H.264 encode; seeking verified |
@@ -65,6 +71,7 @@ The original device has been tested, but the public procedure has not yet been r
 | RetroArch PS2 adaptation | Native Mali backend and accepted presentation adapter; performance depends on software and temperature |
 | USB hub, simultaneous charging and external disks | Not yet tested |
 | Bluetooth | Homeio radio/discovery controls verified; Xbox pairing and in-game input confirmed on the project device |
+| Proxmox / KVM ARM64 | Eight-vCPU Debian guest tested on all physical cores; experimental source profile, not in the current image candidate |
 | SIM / mobile data and cameras | Not validated |
 | Jellyfin video acceleration | H.264 / HEVC / VP9 SDR decoding, Mali resize and H.264 encoding verified |
 
@@ -86,6 +93,7 @@ The fix is included in the clean image candidate and in the automatic NAS instal
 - [Bluetooth controls in Homeio Settings](docs/BLUETOOTH.md), without using the phone's screen.
 - The MediaTek DMA-BUF adapter, automatically configured for fresh Jellyfin store installs.
 - The Jellyfin compatibility fix and a portable software-mode compose example.
+- [Experimental Proxmox/KVM compatibility source and validation](docs/PROXMOX.md).
 - Installation, recovery, validation and licensing notes.
 
 The custom 3D enclosure is a separate personal build and is not included here. Firmware blobs, factory images, personal data, device credentials and configured root filesystems are not distributed.

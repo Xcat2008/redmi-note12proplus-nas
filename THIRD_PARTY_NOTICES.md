@@ -14,6 +14,8 @@ This repository contains a source/configuration adaptation, not a replacement ow
 | Native Libretro ABI/CPU placement and Vulkan presentation adapters | José Miranda (Xcat2008), this project | GPL-3.0-or-later; see LICENSES/GPL-3.0-only.txt |
 | Go runtime linked into the FFmpeg bridge executable | The Go Authors | BSD-3-Clause; see LICENSES/Go-BSD-3-Clause.txt |
 
+The experimental Proxmox integration adds original maintenance/reporting wrappers under AGPL-3.0-only, with the cache ioctl adapter, QEMU launcher and firmware helper under the MIT notices in their files and `apps/proxmox/LICENSE.MIT`. Original PVE vendor modules are obtained separately and retain their package licenses. No Proxmox/QEMU executable, LXCFS library, EDK2 firmware image or configured VM is distributed by this source bundle. LXCFS uses LGPL-2.1-or-later; EDK2's general license is BSD-2-Clause-Patent with per-file exceptions. A later binary image must include the corresponding upstream notices and source obligations for its actual packages.
+
 Dependencies obtained separately (Droidian/Debian packages, Halium, libhybris, Android vendor libraries, Docker, PostgreSQL, nginx, Jellyfin, RetroArch, its cores, Sunshine, Selkies and LinuxServer.io images) retain their own licenses. No factory image or proprietary firmware is included. Follow the relevant upstream license and corresponding-source requirements when redistributing binaries or a modified system. A complete redistributable system image has not been prepared by this release.
 
 The upstream Homeio license is included unchanged in `LICENSES/AGPL-3.0-only.txt`. Linux's GPLv2 license text is included in `LICENSES/GPL-2.0-only.txt`. The repository does not relicense GPLv2 kernel material under AGPL.

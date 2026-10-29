@@ -33,6 +33,12 @@ O aparelho tem 8 GiB de RAM física; o Linux apresenta cerca de 7,4 GiB após as
 
 A atualização de código acrescenta apresentação Vulkan na Mali, distribuição da emulação pelos núcleos rápidos, redução de imagens repetidas e correções de estabilidade do kernel e do arranque. As [notas técnicas de desempenho e estabilidade](docs/PERFORMANCE.md) documentam as medições e os limites de temperatura, sem overclock. Estas alterações ainda não constituem uma nova imagem limpa pronta a instalar.
 
+## Proxmox e máquinas virtuais
+
+O Redmi do projeto já tem **Proxmox VE 9.2.20 ARM64 com aceleração KVM**. Foi testada uma VM Debian 13 com oito CPUs virtuais, com cálculo real nos oito núcleos físicos, persistência no disco, rede, consola web e reinício. A adaptação do QEMU resolve a inconsistência de cache entre os A55 e os A78 neste kernel.
+
+As [instruções e o estado dos testes](docs/PROXMOX.md) e o [código das correções](apps/proxmox/README.md) estão publicados. É um perfil experimental, proposto como componente opcional: **a imagem candidata anterior ainda não o inclui**. A instalação automática de raiz e o reinício completo do telefone com este perfil continuam por validar. O teste de reinício de 28 de outubro refere-se à base NAS anterior.
+
 ## Estado desta publicação
 
 Esta é uma **prévia técnica com código-fonte, configurações e notas de instalação**. A NAS funciona no aparelho do projeto. Também foi construída uma imagem limpa de arranque e dados, com um instalador para Windows, mas falta testar essa instalação completa num aparelho limpo antes de disponibilizar os binários ao público. Consulta o [estado do instalador](docs/IMAGE-INSTALLER.md).

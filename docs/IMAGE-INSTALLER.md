@@ -4,7 +4,7 @@
 
 A clean candidate has been assembled separately from the author’s working NAS. It consists of an Android-format `boot.img`, a sparse `userdata.img`, and a Windows installer. A phone does not boot a PC-style ISO.
 
-**The candidate has not passed a complete clean physical installation test. It is not a stable release or a public ready-to-flash download.** The existing phone has not been erased to produce it. Source and documentation are public so the work can be reviewed while validation continues.
+**The corrected rc2 passed a supervised clean installation and automatic NAS first boot on the project phone. It is not yet a public ready-to-flash release.** The distribution image was built separately; the phone was erased only to validate it. Binary redistribution review and stock-device EL2 activation remain incomplete. The [sanitized validation record](../image/validation-rc2.json) states the exact test scope.
 
 | Check | State |
 | --- | --- |
@@ -20,9 +20,10 @@ A clean candidate has been assembled separately from the author’s working NAS.
 | Per-installation Linux PIN and SSH key | Implemented; no shared default credentials |
 | Windows installer | Graphical assistant and CLI built; candidate installation remains blocked, verification does not contact the phone |
 | Model, unlocked bootloader, slot and partition-layout checks | Implemented |
-| Proxmox / eight-CPU KVM profile | Tested on the configured device. Absent from rc7; the next 0.2 candidate preloads clean userspace and matching KVM modules, disabled by default. Fresh EL2 activation and installation remain unvalidated. |
-| Clean physical install, Wi-Fi onboarding, first NAS setup | Supervised test on the project phone reached Homeio registration; bootstrap corrections are being integrated and the full unattended rerun is pending |
-| Complete binary redistribution and corresponding-source audit | Pending before public binaries |
+| Proxmox / eight-CPU KVM profile | Tested on the configured device. Absent from rc7; the next 0.2 candidate preloads clean userspace and matching KVM modules, disabled by default. Optional activation and an eight-vCPU KVM smoke guest passed after the clean installation. Stock-device EL2 activation remains unvalidated. |
+| Clean physical install, Wi-Fi onboarding, first NAS setup | Passed with rc2: public flash/personalization functions, fresh Wi-Fi onboarding, automatic NAS bootstrap and Homeio registration. The host test wrapper resumed USB setup after a missing local dependency; no phone installation repairs were used |
+| Full phone restart | Passed both with NAS alone and with optional Proxmox enabled; no physical assistance |
+| Complete binary redistribution and corresponding-source audit | In progress; public binaries remain blocked |
 
 The rc7 integration consolidates the current native gaming, mobile telemetry,
 optional memory/battery controls, Wi-Fi scan compatibility, quiet GPU logging
@@ -42,7 +43,7 @@ The target is specifically **22101316UG / rubypro, 256 GB**, using the documente
 
 ## Proxmox image boundary
 
-The [experimental KVM/Proxmox profile](PROXMOX.md) was validated after **0.1.0-rc7** was assembled. The **0.2** candidates add a clean Proxmox package base, the eight-CPU cache adapter, UEFI adaptation and matching KVM kernel/modules. Its optional service starts disabled, with no author password, account database or VM. The rc1 empty-VBMeta profile was retired after its physical boot failure; rc2 preserves the required factory AVB metadata. It remains a validation candidate, not a public approved replacement for rc7.
+The [experimental KVM/Proxmox profile](PROXMOX.md) was validated after **0.1.0-rc7** was assembled. The **0.2** candidates add a clean Proxmox package base, the eight-CPU cache adapter, UEFI adaptation and matching KVM kernel/modules. Its optional service starts disabled, with no author password, account database or VM. On rc2, enabling this clean base passed: a 512 MiB ARM64 guest booted with eight vCPUs and confirmed KVM, checked memory/network and powered off. A subsequent full phone reboot restored Homeio and Proxmox without physical help. The rc1 empty-VBMeta profile was retired after its physical boot failure; rc2 preserves the required factory AVB metadata. It remains a validation candidate, not a public approved replacement for rc7.
 
 The normal NAS installer does not activate EL2 or change the phone's partition metadata. A fresh device without actual EL2 cannot use hardware KVM merely because the new kernel and packages are present. `setup-preloaded.py` checks that capability before starting the optional environment; `prepare-profile.py` stages only separate, unpersonalized build roots. These helpers do not make the whole fresh platform installation validated.
 
@@ -58,7 +59,7 @@ Proxmox is proposed as an optional component for the next compatible profile. A 
 6. Complete one-time setup over the physical USB connection and configure Wi-Fi.
 7. Once internet is available, first-boot services install the pinned NAS stack. Open Homeio from another computer and create a separate web account.
 
-The graphical assistant blocks installation until both the physical validation and binary redistribution checks pass. Its CLI expert override is for supervised testing, not a recommended shortcut. The 0.2.0-rc1 empty-VBMeta profile failed its physical boot test and is retired: the same clean boot image returned successfully with the factory AVB metadata preserved. The corrected client rejects that retired profile before any device write and flashes only userdata and boot_a. Full clean-install validation remains separate from that isolated boot test. See the [complete Windows user guide](INSTALL-WIZARD.pt-PT.md).
+The graphical assistant blocks installation until both the physical validation and binary redistribution checks pass. Its CLI expert override is for supervised testing, not a recommended shortcut. The 0.2.0-rc1 empty-VBMeta profile failed its physical boot test and is retired: the same clean boot image returned successfully with the factory AVB metadata preserved. The corrected client rejects that retired profile before any device write and flashes only userdata and boot_a. The later rc2 clean-install and reboot results are recorded separately from that isolated boot test; they do not validate automatic EL2 activation on a factory device. See the [complete Windows user guide](INSTALL-WIZARD.pt-PT.md).
 
 ## Source
 
@@ -66,4 +67,4 @@ The guarded client and one-time USB setup handler are in [`image/`](../image/). 
 
 ## Português
 
-A imagem limpa já foi construída, juntamente com o instalador Windows. Ainda falta repetir o processo completo num telemóvel limpo e concluir a revisão de redistribuição dos binários. Até lá, a publicação apresenta o código e o estado real dos testes. O desbloqueio Xiaomi continua a ser manual; a instalação apaga o aparelho e cada utilizador define as suas próprias credenciais.
+A imagem limpa já foi construída, juntamente com o instalador Windows. A rc2 já passou a reinstalação supervisionada no telefone do projeto, a configuração automática da NAS e o reinício completo, também com Proxmox ativado. A revisão de redistribuição dos binários e a ativação EL2 num aparelho de origem continuam pendentes. Até lá, a publicação apresenta o código e o estado real dos testes. O desbloqueio Xiaomi continua a ser manual; a instalação apaga o aparelho e cada utilizador define as suas próprias credenciais.

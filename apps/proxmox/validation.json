@@ -60,8 +60,8 @@
   },
   "limits": {
     "short_functional_tests_not_endurance": true,
-    "fresh_install_of_this_profile_validated": false,
-    "full_phone_reboot_of_this_profile_validated": false,
+    "fresh_install_of_this_profile_validated": true,
+    "full_phone_reboot_of_this_profile_validated": true,
     "nested_lxc_validated": false,
     "windows_arm_validated": false,
     "gpu_passthrough_validated": false,
@@ -75,5 +75,17 @@
     "configured_vm_or_rootfs_included": false,
     "credentials_or_user_data_included": false
   },
-  "tested_edk2_code_sha256": "3f9b9b65fa6e5b31b67e7b6a8f8142b6df7c1afe0255ef9cc3b6431678ea8611"
+  "tested_edk2_code_sha256": "3f9b9b65fa6e5b31b67e7b6a8f8142b6df7c1afe0255ef9cc3b6431678ea8611",
+  "clean_candidate_validation": {
+    "version": "0.2.0-rc2",
+    "record": "../../image/validation-rc2.json",
+    "platform_el2_previously_enabled": true,
+    "optional_activation": true,
+    "guest_vcpus": 8,
+    "guest_memory_mib": 512,
+    "hardware_kvm_confirmed": true,
+    "guest_memory_network_poweroff": true,
+    "full_phone_restart_after_enable": true,
+    "stock_el2_activation": false
+  }
 }

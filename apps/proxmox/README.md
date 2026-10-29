@@ -1,12 +1,12 @@
 # Proxmox ARM64 integration
 
-**Experimental source preview, tested on the project phone. This component is not in the current clean image candidate.**
+**Experimental optional profile, now preloaded in the private rc2 clean candidate and tested after reinstalling the project phone. No public binary release yet.**
 
 The running Redmi has Proxmox VE 9.2.20 in an isolated `systemd-nspawn` environment. Its Linux guests use hardware KVM and can execute on all eight physical cores. The source here preserves the compatibility changes without distributing a configured phone, accounts, virtual disks or firmware binaries.
 
 Read the [installation boundary, architecture and validation](../../docs/PROXMOX.md) first. Installing the Proxmox packages does not enable EL2 or turn the existing NAS candidate into a KVM image.
 
-The next 0.2 validation candidate stages clean packages with `prepare-profile.py` and includes the guarded `setup-preloaded.py` helper. They preserve an existing NAS/account database, leave the PVE service disabled by default and do not activate EL2. The complete fresh-device installation and full phone reboot still need validation; these helpers are not a released one-click platform installer.
+The next 0.2 validation candidate stages clean packages with `prepare-profile.py` and includes the guarded `setup-preloaded.py` helper. They preserve an existing NAS/account database, leave the PVE service disabled by default and do not activate EL2. The rc2 clean NAS bootstrap, optional PVE activation, eight-vCPU KVM guest and full phone reboot have passed on the already EL2-enabled project phone. Stock-device EL2 activation remains separate; these helpers are not a released one-click platform installer.
 
 ## Included
 
@@ -35,7 +35,7 @@ To apply the source integration, stop the VMs first and ensure `build-essential`
 sudo bash apps/proxmox/apply-existing.sh --apply
 ```
 
-Restart only the Proxmox environment from the NAS host, then repeat the guest tests in the guide. The public updater has offline regression checks and its non-installing preflight was exercised on the configured device; it has not been replayed as a complete fresh installation. It does not create the container, reserve networking, add a Homeio shortcut, create an account, change CPU/RAM limits, activate EL2 or install a kernel.
+Restart only the Proxmox environment from the NAS host, then repeat the guest tests in the guide. The public updater has offline regression checks and its non-installing preflight was exercised on the configured device; the preloaded-profile activation has also been exercised after a clean rc2 installation, without applying phone-side installation repairs. It does not create the container, reserve networking, add a Homeio shortcut, create an account, change CPU/RAM limits, activate EL2 or install a kernel.
 
 If the preflight rejects the environment, do not bypass it by changing version strings. The missing platform/install stages are still separate work for the next image profile.
 

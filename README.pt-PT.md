@@ -37,13 +37,13 @@ A atualização de código acrescenta apresentação Vulkan na Mali, distribuiç
 
 O Redmi do projeto já tem **Proxmox VE 9.2.20 ARM64 com aceleração KVM**. Foi testada uma VM Debian 13 com oito CPUs virtuais, com cálculo real nos oito núcleos físicos, persistência no disco, rede, consola web e reinício. A adaptação do QEMU resolve a inconsistência de cache entre os A55 e os A78 neste kernel.
 
-As [instruções e o estado dos testes](docs/PROXMOX.md) e o [código das correções](apps/proxmox/README.md) estão publicados. É um perfil experimental e opcional: a rc7 não o inclui; a candidata 0.2 em preparação acrescenta a base Proxmox limpa, desligada, e o kernel/módulos KVM correspondentes. A ativação EL2 de raiz, a instalação completa e o reinício do telefone com este perfil continuam por validar. O teste de reinício de 28 de outubro refere-se à base NAS anterior.
+As [instruções e o estado dos testes](docs/PROXMOX.md) e o [código das correções](apps/proxmox/README.md) estão publicados. É um perfil experimental e opcional: a rc7 não o inclui; a candidata 0.2 em preparação acrescenta a base Proxmox limpa, desligada, e o kernel/módulos KVM correspondentes. A reinstalação limpa supervisionada da rc2, o arranque automático da NAS, a ativação opcional do Proxmox, uma VM de oito CPUs e o reinício completo já passaram no telefone do projeto. A ativação EL2 num aparelho de origem continua por automatizar e validar.
 
 O [guia do assistente Windows](docs/INSTALL-WIZARD.pt-PT.md) explica o fluxo de descarga, verificação e configuração. O instalador gráfico mantém a instalação bloqueada nas candidatas não aprovadas. O primeiro arranque precisa de Internet para obter os programas de origem.
 
 ## Estado desta publicação
 
-Esta é uma **prévia técnica com código-fonte, configurações e notas de instalação**. A NAS funciona no aparelho do projeto. Também foi construída uma imagem limpa de arranque e dados, com um instalador para Windows, mas falta testar essa instalação completa num aparelho limpo antes de disponibilizar os binários ao público. Consulta o [estado do instalador](docs/IMAGE-INSTALLER.md).
+Esta é uma **prévia técnica com código-fonte, configurações e notas de instalação**. A NAS funciona no aparelho do projeto. Também foi construída uma imagem limpa de arranque e dados, com um instalador para Windows, e a rc2 já passou a reinstalação supervisionada no telefone do projeto, sem reparações na configuração da NAS. Falta concluir a revisão de distribuição dos binários e a ativação EL2 de origem antes de anunciar uma solução pública completa. Consulta o [estado do instalador](docs/IMAGE-INSTALLER.md).
 
 O aparelho usado é o **Redmi Note 12 Pro+ 5G, modelo 22101316UG (rubypro)**, com Dimensity 1080, 8 GiB de RAM física e 256 GB de armazenamento. Não usar imagens do modelo 4G ou de outro telemóvel.
 
@@ -59,7 +59,7 @@ Os perfis de energia estão em **Settings → Performance**: Poupança, Equilibr
 
 A ponte de vídeo utiliza os serviços multimédia do Android que o Droidian já inclui. Foram testados H.264, HEVC e VP9 SDR, saída H.264, reprodução no browser e procura dentro do filme. O áudio, o empacotamento HLS e outros serviços continuam a usar CPU. HDR, legendas gravadas na imagem e outros formatos não ficam certificados por estes testes. Esta integração também não acelera automaticamente todas as aplicações.
 
-A imagem limpa candidata já inclui o adaptador compilado, o código e o perfil automático do Jellyfin. A instalação de raiz dessa imagem num aparelho limpo continua por validar. [Detalhes e testes](docs/MEDIATEK-VIDEO.md).
+A imagem limpa candidata já inclui o adaptador compilado, o código e o perfil automático do Jellyfin. A rc2 já passou a instalação de raiz supervisionada e o arranque automático da NAS no telefone do projeto. [Detalhes e testes](docs/MEDIATEK-VIDEO.md).
 
 ## Como começar
 

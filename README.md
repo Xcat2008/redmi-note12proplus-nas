@@ -47,13 +47,13 @@ The consolidated [native gaming profile](docs/NATIVE-GAMING.md) adds independent
 
 The configured Redmi now runs **Proxmox VE 9.2.20 ARM64 with hardware KVM**. A full Debian 13 guest with eight vCPUs passed calculation on all eight physical cores, disk persistence, private networking, web-console and restart checks. The old kernel's mixed-cluster cache mismatch is handled by the scoped QEMU compatibility adapter.
 
-The [Proxmox guide](docs/PROXMOX.md) and [compatibility source](apps/proxmox/README.md) are public. This remains an **experimental optional profile**: rc7 does not contain it; the next 0.2 candidate preloads a clean, disabled Proxmox base and matching KVM kernel/modules. Fresh EL2 activation and unattended installation are not released. The NAS reboot result above predates this KVM profile; its full phone reboot is still pending validation.
+The [Proxmox guide](docs/PROXMOX.md) and [compatibility source](apps/proxmox/README.md) are public. This remains an **experimental optional profile**: rc7 does not contain it; the next 0.2 candidate preloads a clean, disabled Proxmox base and matching KVM kernel/modules. Fresh EL2 activation and unattended installation are not released. The rc2 supervised clean installation now passed automatic NAS bootstrap, optional Proxmox activation and an eight-vCPU KVM smoke guest. Full phone restart passed both with and without Proxmox enabled. Stock-device EL2 activation remains separate.
 
 ## Release status
 
-**Developer preview. The NAS runs on the project device. A clean boot/data image and a guarded Windows installer have also been built, but still need a complete physical installation test before a public binary release.**
+**Developer preview. The NAS runs on the project device. A clean boot/data image and a guarded Windows installer have also been built, and rc2 passed a supervised physical clean install and automatic NAS first boot. Binary redistribution review and stock-device EL2 activation remain incomplete, so public binaries are not released.**
 
-The original device has been tested, but the public procedure has not yet been repeated on a second clean phone. The candidate uses individual setup credentials rather than a copy of the author’s configured system. Read the [installer status](docs/IMAGE-INSTALLER.md) and [installation guide](docs/INSTALLATION.md) before deciding to replicate it.
+The project phone was erased and reinstalled for this validation; a second device has not been tested. Public flash/personalization functions were used, with a host-side USB setup retry, followed by fully automatic NAS bootstrap. No phone installation repairs were needed. The candidate uses individual setup credentials rather than a copy of the author’s configured system. Read the [installer status](docs/IMAGE-INSTALLER.md) and [installation guide](docs/INSTALLATION.md) before deciding to replicate it.
 
 The [Windows assistant guide](docs/INSTALL-WIZARD.pt-PT.md) describes the intended download, verification and setup flow. The graphical installer keeps unapproved candidates blocked. First setup still needs Internet for upstream programs; this is not a fully offline image.
 
@@ -62,7 +62,7 @@ The [Windows assistant guide](docs/INSTALL-WIZARD.pt-PT.md) describes the intend
 | Native Linux boot and systemd | Working |
 | Wi-Fi and automatic reconnect | Working |
 | Homeio browser desktop | Working |
-| Automatic NAS startup after reboot | Verified on the NAS baseline; full phone reboot of the experimental KVM profile pending |
+| Automatic NAS startup after reboot | Verified after clean rc2 installation, with and without optional Proxmox |
 | NAS stays available with display off | Working after the mobile-power-saver fix |
 | Docker ARM64 container | Working |
 | Jellyfin | Real 1080p → 720p browser playback with hardware decode, Mali resize and hardware H.264 encode; seeking verified |

@@ -11,8 +11,8 @@ This is an experimental device profile. It is separate from the previously assem
 | Configured project phone | Proxmox installed, Homeio shortcut available, eight CPUs usable by VMs |
 | This repository | Compatibility source, a guarded updater for an existing environment, kernel configuration fragment and validation notes |
 | Previous 0.1.0-rc7 candidate | Does not contain the KVM platform changes or this Proxmox profile |
-| Next 0.2.0-rc1 validation build | Clean Proxmox packages and matching KVM kernel/modules are being staged, with the optional service disabled and no accounts or VMs. Fresh EL2 activation remains a separate unvalidated stage. |
-| Public automatic fresh Proxmox install | Not released; the platform activation and clean installation procedure still need validation |
+| Private 0.2.0-rc2 validation build | Clean packages and matching KVM kernel/modules included, optional service disabled, no author accounts or VMs. Optional activation and an eight-vCPU smoke guest passed after reinstalling the project phone. Stock-device EL2 activation is still unvalidated. |
+| Public automatic fresh Proxmox install | Not released; stock-device EL2 activation and binary redistribution review remain incomplete |
 
 The intended distribution is an **optional virtual-machine component** on a compatible KVM platform. A NAS-only installation should not have to run the Proxmox daemons. This is not an App Store entry that already exists. The image setup now accepts the exact tested KVM kernel and installs the isolated-environment prerequisites; the optional PVE service remains disabled until explicitly configured on a working KVM platform. Automatic personal backups remain off.
 
@@ -65,7 +65,7 @@ The disk wrapper selects PVE's normal alternative when `io_uring` is unavailable
 5. Create credentials for that installation. Use the Linux PAM realm for an account created inside the Proxmox environment. No project password, account database, SSH key or configured VM is provided.
 6. Repeat the guest validation before relying on the profile.
 
-On the configured system the Homeio shortcut opens the Proxmox web interface on port 8006. On another installation, use that system's own host address. The node's Reboot/Shutdown controls apply to the isolated Proxmox environment. A full phone restart is a different operation and has not been revalidated with this experimental kernel/profile.
+On the configured system the Homeio shortcut opens the Proxmox web interface on port 8006. On another installation, use that system's own host address. The node's Reboot/Shutdown controls apply to the isolated Proxmox environment. A full phone restart is a different operation. It now passed after clean rc2 installation, both before and after enabling the optional Proxmox environment.
 
 ## Guest setup and validation
 
@@ -84,13 +84,13 @@ The device tests covered:
 
 These are short functional tests, not long-duration stress certification. [Sanitized validation data](../apps/proxmox/validation.json) contains no private addresses, boot identifiers, credentials, user media or virtual disks.
 
-Fresh installation, a full phone reboot of this profile, nested PVE LXC, Windows ARM, GPU passthrough, HA and Ceph are not certified. x86 Windows/Linux cannot use ARM KVM as native hardware virtualization. No automatic backup job is enabled by this source package.
+A supervised rc2 reinstall, automatic NAS first boot, optional Proxmox activation and full phone reboot have now passed on the project phone. This phone already had EL2 enabled; these results do not validate activation on a stock device. Nested PVE LXC, Windows ARM, GPU passthrough, HA and Ceph remain unvalidated. x86 Windows/Linux cannot use ARM KVM as native hardware virtualization. No automatic backup job is enabled by this source package.
 
 ## Before a KVM image release
 
 The next image profile must be assembled from a clean base, carry these sources and matching modules, provision each installation's own credentials, and pass a supervised physical install and full reboot with recovery available. The boot-metadata activation needs its own device/layout checks and recovery validation. Redistribution/corresponding-source checks must also be completed. Until then, the existing image manifest stays unapproved and unchanged.
 
-`prepare-profile.py` and `setup-preloaded.py` are validation-stage tools for the clean optional userspace. The first refuses a personalized NAS or an initialized PVE account database; the second refuses missing KVM, unknown CPU/kernel profiles, existing roots it does not own and conflicting private networking. Its check-only invocation does not change configuration. It does not activate EL2, write phone boot metadata, install a kernel or create a VM. These tools still need the supervised clean-device test before an end-user one-click option is offered.
+`prepare-profile.py` and `setup-preloaded.py` are validation-stage tools for the clean optional userspace. The first refuses a personalized NAS or an initialized PVE account database; the second refuses missing KVM, unknown CPU/kernel profiles, existing roots it does not own and conflicting private networking. Its check-only invocation does not change configuration. It does not activate EL2, write phone boot metadata, install a kernel or create a VM. The activation tool passed after the supervised clean-device test, but it does not implement the missing stock-device EL2 activation.
 
 ## Português
 
@@ -98,4 +98,4 @@ No telemóvel do projeto, o Proxmox já está instalado e utiliza os oito núcle
 
 A proposta de distribuição é deixar o Proxmox como componente opcional numa plataforma KVM compatível. A entrada na loja e a instalação automática de raiz ainda não estão implementadas. O atualizador publicado destina-se apenas a um Proxmox isolado que já funciona; por defeito, verifica sem instalar. Não altera o arranque do telefone e não copia as contas do autor.
 
-Antes de anunciar uma imagem com Proxmox, falta reconstruir e validar a instalação limpa, a ativação do EL2 e o reinício completo do aparelho. Os testes de VMs, disco, rede, consola e utilização dos oito CPUs já passaram no telefone do projeto.
+A rc2 foi reconstruída separadamente e passou a instalação limpa, a ativação opcional do Proxmox, uma VM de oito CPUs e o reinício completo. Continua por fazer a ativação EL2 automática num aparelho de origem e a revisão de distribuição antes da imagem pública. Os testes de VMs, disco, rede, consola e utilização dos oito CPUs já passaram no telefone do projeto.

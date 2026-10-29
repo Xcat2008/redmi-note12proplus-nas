@@ -1,0 +1,48 @@
+{
+  "version": "0.2.0-rc2",
+  "date": "2026-10-29",
+  "model": "22101316UG",
+  "physicalPhoneReused": true,
+  "scope": "Supervised public flash/personalization functions, followed by automatic NAS first boot on the project phone with EL2 already enabled.",
+  "checks": {
+    "userdataAndBootWritten": true,
+    "factoryAvbAndGptPreserved": true,
+    "individualSetupCredentials": true,
+    "automaticNasFirstBoot": true,
+    "phoneInstallationRepairsRequired": false,
+    "hostTestHarnessUsbResumeUsed": true,
+    "homeioRegistrationReached": true,
+    "dataFilesystemExpanded": true,
+    "retroarchNativeMali": true,
+    "steamLaunchClosesRetroarch": true,
+    "nasOnlyPhoneRestart": true,
+    "optionalProxmoxActivation": true,
+    "eightVcpuKvmGuest": true,
+    "guestMemoryAndNetwork": true,
+    "guestCleanPoweroff": true,
+    "phoneRestartWithProxmoxEnabled": true
+  },
+  "optionalDefaults": {
+    "proxmox": false,
+    "storageMemoryExtension": false,
+    "batteryCare": false,
+    "automaticPersonalBackups": false
+  },
+  "limits": {
+    "guiFullPhysicalClickThroughTested": false,
+    "stockDeviceEl2ActivationImplemented": false,
+    "binaryRedistributionReviewComplete": false,
+    "publicBinaryRelease": false,
+    "longDurationCertification": false
+  },
+  "files": {
+    "boot.img": {
+      "bytes": 134217728,
+      "sha256": "0295f05fbda8cefad915e8ffb3400ffa7a8abe6b1d91889242242ceb615b9792"
+    },
+    "userdata.img": {
+      "bytes": 5706047664,
+      "sha256": "6587202a28989ebe9656bd19850ed2ba0162dac60762fdc19e2468dd1db7f346"
+    }
+  }
+}

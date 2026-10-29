@@ -165,7 +165,7 @@
     "requires_actual_el2": true,
     "platform_activation_installer_published": false,
     "profile_source": "apps/proxmox",
-    "validation_scope": "apps/proxmox/validation.json",
+    "validation_scope": "supervised rc2 installation on the project phone with EL2 already enabled; stock activation not validated",
     "cache_adapter_source_sha256": "548402e277d3666abba73561d496c3b5721fd0a877f138789cde4e9abf996d55",
     "edk2_vendor_code_sha256": "3f9b9b65fa6e5b31b67e7b6a8f8142b6df7c1afe0255ef9cc3b6431678ea8611",
     "allowed_physical_cpus": [
@@ -180,9 +180,9 @@
     ],
     "memory_limit_gib": 3,
     "swap_limit_gib": 1,
-    "clean_image_candidate_includes_profile": false,
-    "fresh_install_verified": false,
-    "full_phone_reboot_verified": false,
+    "clean_image_candidate_includes_profile": true,
+    "fresh_install_verified": true,
+    "full_phone_reboot_verified": true,
     "normal_nas_installer_changed": true,
     "distribution_plan": "optional component after compatible platform and clean installation validation",
     "maintenance_updater_scope": "existing isolated PVE profile only; not a bootstrap or kernel installer",
@@ -200,6 +200,14 @@
     "fastboot_product": "rubypro",
     "test_profile_includes_linux_vbmeta": false,
     "public_binary_release": false,
-    "preserves_required_factory_avb": true
+    "preserves_required_factory_avb": true,
+    "physical_validation_record": "image/validation-rc2.json"
+  },
+  "genesis_plus_gx": {
+    "repository": "https://github.com/libretro/Genesis-Plus-GX",
+    "commit": "60bee4c724859710ce05672239e5b601ad01382e",
+    "license": "Non-commercial upstream license plus component notices; not a GPL-only core",
+    "license_file": "LICENSES/Genesis-Plus-GX-LICENSE.txt",
+    "source_archive_sha256": "be38862ff269dfb69c543fbd4219c1883f18f9de99d00164040b40d6e5b3a844"
   }
 }

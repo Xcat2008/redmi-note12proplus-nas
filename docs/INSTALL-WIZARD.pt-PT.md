@@ -2,9 +2,9 @@
 
 O objetivo é descarregar um pacote, abrir o assistente no Windows e deixar a configuração inicial a cargo do instalador. Não é necessário compilar Linux nem copiar comandos de partições.
 
-**Estado atual: candidato de testes. Ainda não há uma versão aprovada para instalação pública.** O assistente permite verificar o pacote, mas mantém a instalação normal bloqueada enquanto faltarem o teste físico de raiz e a revisão de distribuição. A existência de um `.exe` não significa que esses testes já passaram.
+**Estado atual: candidato de testes. Ainda não há uma versão aprovada para instalação pública.** O assistente permite verificar o pacote, mas mantém a instalação normal bloqueada enquanto a revisão de distribuição estiver pendente. A rc2 já passou a instalação física supervisionada e o arranque automático da NAS. A existência de um `.exe` não significa que esses testes já passaram.
 
-O primeiro teste supervisionado apagou e reinstalou o telefone do projeto, com autorização do proprietário. A personalização USB, o Wi-Fi e o Homeio arrancaram; esse teste revelou dependências e uma ordem de arranque que estão agora corrigidas no código. A instalação completa sem intervenções ainda precisa de ser repetida com a candidata corrigida.
+O primeiro teste supervisionado apagou e reinstalou o telefone do projeto, com autorização do proprietário. A personalização USB, o Wi-Fi e o Homeio arrancaram; esse teste revelou dependências e uma ordem de arranque que estão agora corrigidas no código. A repetição com a rc2 corrigida concluiu a instalação automática da NAS sem reparações no telefone. O wrapper de testes no PC precisou de retomar a personalização USB após uma dependência local em falta; não foi um teste físico completo dos cliques do assistente gráfico. Os dois modos de reinício, sem e com Proxmox ativado, passaram. [Registo dos testes](../image/validation-rc2.json).
 
 ## O telefone certo
 
@@ -31,7 +31,7 @@ Mantém o cabo ligado e usa **Retomar configuração USB** no assistente. Esta o
 
 Se a gravação falhar, guarda o erro apresentado e conserva o telefone em FASTBOOT. Não experimentes ficheiros de outros modelos nem voltes a bloquear o bootloader. Uma NAS instalada usa `userdata` em ext4; restaurar apenas a imagem de arranque Android não devolve o telefone ao estado de fábrica. Para recuperação completa é necessário o firmware oficial correspondente ao modelo/região e um procedimento validado para esse aparelho.
 
-Os metadados AVB do fabricante devem manter-se intactos. O teste físico do perfil 0.2.0-rc1 falhou quando estes foram substituídos por um `vbmeta.img` vazio e genérico; o mesmo novo arranque funcionou ao conservar os originais. Esse perfil foi retirado e o cliente corrigido rejeita-o antes de escrever dados. O bootloader continua a ter de estar desbloqueado, e o firmware original tem de corresponder exatamente ao indicado. A imagem de arranque Linux não tem uma assinatura de confiança da Xiaomi. A instalação limpa completa continua a exigir validação física; a verificação estrutural no PC não a substitui.
+Os metadados AVB do fabricante devem manter-se intactos. O teste físico do perfil 0.2.0-rc1 falhou quando estes foram substituídos por um `vbmeta.img` vazio e genérico; o mesmo novo arranque funcionou ao conservar os originais. Esse perfil foi retirado e o cliente corrigido rejeita-o antes de escrever dados. O bootloader continua a ter de estar desbloqueado, e o firmware original tem de corresponder exatamente ao indicado. A imagem de arranque Linux não tem uma assinatura de confiança da Xiaomi. A instalação física supervisionada da rc2 já passou; a verificação estrutural no PC continua a ser uma etapa diferente.
 
 ## O que está incluído
 
@@ -45,7 +45,7 @@ O pacote em preparação inclui uma base Proxmox ARM64 limpa e as correções pa
 
 Há uma condição adicional: o arranque tem de entregar o processador em **EL2**, e o kernel tem de expor KVM funcional. No telefone do projeto foi necessária uma alteração específica de metadados de arranque. A instalação normal **não aplica automaticamente essa alteração**. Instalar Linux ou selecionar uma opção não a substitui.
 
-Por isso, a candidata ainda não é uma solução pública de Proxmox de um clique. A ativação de raiz, o reinício completo e a recuperação precisam de validação física antes de se desbloquear essa distribuição. Num ambiente que já tenha EL2/KVM validado, o preparador verifica a compatibilidade antes de ativar serviços e pede uma palavra-passe própria. Consulta o [estado técnico do Proxmox](PROXMOX.md).
+Por isso, a candidata ainda não é uma solução pública de Proxmox de um clique. A ativação opcional e o reinício completo passaram no telefone do projeto, que já tinha EL2 preparado. A instalação da plataforma EL2 num aparelho de origem não foi automatizada nem validada por esse teste. Num ambiente que já tenha EL2/KVM validado, o preparador verifica a compatibilidade antes de ativar serviços e pede uma palavra-passe própria. Consulta o [estado técnico do Proxmox](PROXMOX.md).
 
 ## Para quem vai testar a candidata
 

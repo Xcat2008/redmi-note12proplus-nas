@@ -12,12 +12,20 @@ python3 "$bundle/preflight.py"
 vendor=/usr/share/pve-edk2-firmware/AAVMF_CODE.fd.redmi-vendor
 test -f "$vendor" || vendor=/usr/share/pve-edk2-firmware/AAVMF_CODE.fd
 python3 - "$bundle/runtime" "$vendor" <<'PY'
-import sys,platform,json
+import sys,platform,json,hashlib
 from pathlib import Path
 sys.path.insert(0,sys.argv[1])
-from firmware_compat import transform_vendor
-_,receipt=transform_vendor(Path(sys.argv[2]).read_bytes(),platform.release())
-print(json.dumps(dict(receipt,configuration_written=False)))
+from firmware_compat import transform_vendor, SUPPORTED_VENDOR_SHA256
+directory=Path(sys.argv[2]).parent
+for name,expected in SUPPORTED_VENDOR_SHA256.items():
+    target=directory/name
+    vendor=directory/(name+'.redmi-vendor')
+    if target.is_symlink() or vendor.is_symlink():raise SystemExit('Unexpected firmware symlink')
+    data=(vendor if vendor.exists() else target).read_bytes()
+    if platform.release().startswith('4.19.') and hashlib.sha256(data).hexdigest()!=expected:
+        raise SystemExit('Unreviewed firmware: '+name)
+    _,receipt=transform_vendor(data,platform.release())
+    print(json.dumps(dict(receipt,variant=name,configuration_written=False)))
 PY
 if [[ $mode == --check ]]; then
     echo 'Existing-profile preflight passed. No configuration changed.'
@@ -57,6 +65,7 @@ ensure_diversion /usr/share/perl5/PVE/QemuServer/Drive.pm
 install -m644 "$bundle/runtime/ProcFSTools.pm" /usr/share/perl5/PVE/ProcFSTools.pm
 install -m644 "$bundle/runtime/Drive.pm" /usr/share/perl5/PVE/QemuServer/Drive.pm
 ensure_diversion /usr/share/pve-edk2-firmware/AAVMF_CODE.fd
+ensure_diversion /usr/share/pve-edk2-firmware/AAVMF_CODE.secboot.fd
 install -m755 "$bundle/runtime/firmware_compat.py" /usr/local/sbin/redmi-pve-firmware-compat
 /usr/local/sbin/redmi-pve-firmware-compat --apply
 cat > /etc/apt/apt.conf.d/95-redmi-compatibility <<'EOF'

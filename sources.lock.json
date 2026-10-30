@@ -168,6 +168,7 @@
     "validation_scope": "supervised rc2 installation on the project phone with EL2 already enabled; stock activation not validated",
     "cache_adapter_source_sha256": "548402e277d3666abba73561d496c3b5721fd0a877f138789cde4e9abf996d55",
     "edk2_vendor_code_sha256": "3f9b9b65fa6e5b31b67e7b6a8f8142b6df7c1afe0255ef9cc3b6431678ea8611",
+    "edk2_vendor_secure_code_sha256": "cdd0a1be7960b26619c8ad7bcd412b184afc7555182f5f6becd68cf106c93cad",
     "allowed_physical_cpus": [
       0,
       1,
@@ -178,8 +179,9 @@
       6,
       7
     ],
-    "memory_limit_gib": 3,
-    "swap_limit_gib": 1,
+    "memory_limit_gib": null,
+    "swap_limit_gib": null,
+    "memory_policy": "shared host RAM and swap; no separate container ceiling; VM allocations must leave room for NAS services",
     "clean_image_candidate_includes_profile": true,
     "fresh_install_verified": true,
     "full_phone_reboot_verified": true,

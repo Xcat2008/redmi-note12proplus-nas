@@ -23,6 +23,10 @@ jobs:
         run: python3 -m unittest discover -s apps/steam -p 'test*.py' -v
       - name: Proxmox compatibility regression checks
         run: python3 -m unittest discover -s apps/proxmox/tests -v
+      - name: Optional Proxmox setup privileges and secret handling
+        run: sudo python3 -m unittest discover -s apps/proxmox/tests -p test_control.py -v
+      - name: Browser launch assets and routes
+        run: python3 -m unittest discover -s scripts/lib -p test_gaming_web_assets.py -v
       - name: Shell syntax
         run: find scripts homeio/installer apps/jellyfin/mediatek apps/steam apps/proxmox hardware/gaming -name '*.sh' -print0 | xargs -0 -n1 bash -n
       - name: Native adapter synthetic tests

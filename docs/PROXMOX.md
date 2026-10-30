@@ -32,7 +32,7 @@ flowchart TB
 
 The isolated Proxmox root is on the phone's data filesystem. Its QEMU and PVE packages are kept separate from the host LXC used by Droidian's Android hardware services. A generic Proxmox/Debian kernel must not replace the device kernel. Package restrictions in the configured profile prevent that accidental installation.
 
-The current budget is eight shared physical CPUs, a 3 GiB RAM ceiling and a 1 GiB swap ceiling for the whole Proxmox environment. These are configured limits, not a claim that the phone has only 3 GiB of RAM. The NAS can still use all physical CPUs. The six A55s and two A78s have different performance; eight available cores do not mean eight A78s. Thermal protection and factory clock limits stay active.
+The current profile shares the eight physical CPUs and the host's available RAM with the NAS. The earlier 3 GiB RAM and 1 GiB swap container ceilings have been removed; this does not reserve all RAM for Proxmox or duplicate it. VM allocations must leave room for Linux, Homeio and other applications. The six A55s and two A78s have different performance; eight available cores do not mean eight A78s. Thermal protection and factory clock limits stay active.
 
 Guest network `vmbr0` uses private DHCP/DNS and NAT. It provides outbound access without adding a DHCP server to the home LAN. It does not give every VM an address on the home LAN automatically. The local VM store uses internal phone storage; guests and NAS files share its capacity.
 
@@ -48,9 +48,9 @@ Upstream KVM normalized the virtual cache geometry in the [Linux 6.3 changes](ht
 
 ### UEFI startup
 
-The current EDK2 early identity-map entry stalls on this KVM implementation. The guarded helper changes one SEC branch to use the existing later RAM page-table setup. The vendor code image remains preserved by a package diversion. The VM's EFI variable disk, the phone's boot firmware and the rest of EDK2 are not replaced by this helper.
+The current EDK2 early identity-map entry stalls on this KVM implementation. The guarded helper changes one SEC branch to use the existing later RAM page-table setup. Both normal and Secure Boot code variants need this correction; each original package file remains preserved by a package diversion. The Secure Boot variant was compared with its unmodified version in a diskless KVM test, and graphical UEFI output was then verified in Proxmox. This does not establish Windows guest compatibility. The VM's EFI variable disk, the phone's boot firmware and the rest of EDK2 are not replaced by this helper.
 
-The public updater accepts only the tested vendor code digest and recognized instruction layout. A new, unreviewed firmware package is rejected before this updater changes anything. After an APT update, the hook reports an unsupported version explicitly; a reviewed helper/digest update is then needed. This source preview does not claim compatibility with every future firmware build.
+The public updater accepts only the tested vendor code digests and recognized instruction layout. It validates both variants before replacing either runtime file. A new, unreviewed firmware package is rejected before this updater changes anything. After an APT update, the hook reports an unsupported version explicitly; a reviewed helper/digest update is then needed. This source preview does not claim compatibility with every future firmware build.
 
 ### Old-kernel disk and metrics support
 
@@ -60,16 +60,18 @@ The disk wrapper selects PVE's normal alternative when `io_uring` is unavailable
 
 1. Start with the exact device and a working native Linux NAS. See [installation](INSTALLATION.md).
 2. The boot chain must actually provide EL2, and a matching device kernel plus matching hardware modules must expose working KVM. The [configuration fragment](../kernel/kvm/experimental.config.fragment) alone cannot do this. The device test involved platform boot-metadata changes that are **not** performed by the normal NAS installer or the public maintenance updater.
-3. Build the isolated Proxmox userspace, its private network and scoped metrics without replacing the host LXC. This bootstrap is not yet packaged as a public unattended installer.
+3. In the forthcoming image, open **Homeio Settings → Performance → Virtual machines · Proxmox**. The optional setup checks the actual KVM capability before enabling the clean isolated userspace, private network and scoped metrics. It does not replace the host LXC or activate EL2.
 4. On that existing environment, use the [guarded compatibility updater](../apps/proxmox/README.md). Its preflight rejects a normal non-KVM NAS and an invocation on the NAS host.
 5. Create credentials for that installation. Use the Linux PAM realm for an account created inside the Proxmox environment. No project password, account database, SSH key or configured VM is provided.
 6. Repeat the guest validation before relying on the profile.
 
-On the configured system the Homeio shortcut opens the Proxmox web interface on port 8006. On another installation, use that system's own host address. The node's Reboot/Shutdown controls apply to the isolated Proxmox environment. A full phone restart is a different operation. It now passed after clean rc2 installation, both before and after enabling the optional Proxmox environment.
+Choose a new Proxmox password of at least eight characters in that setup card; no shared default is supplied. After setup, **Open Proxmox** opens HTTPS port 8006 on the current NAS host. Log in as `root`, realm **Linux PAM**. Existing installations show the open button and preserve their accounts. The setup API requires a Homeio session and same-origin requests; it rejects a repeated setup of an initialized installation. The node's Reboot/Shutdown controls apply to the isolated Proxmox environment. A full phone restart is a different operation. It passed after clean rc2 installation, both before and after enabling the optional Proxmox environment.
 
 ## Guest setup and validation
 
-Use an **ARM64/aarch64** guest image, CPU `host`, UEFI/OVMF, a persistent EFI variables disk and a VirtIO/SCSI disk. `vmbr0` is the tested private bridge. The headless Debian cloud image uses `serial0` as its default console; its inactive graphical framebuffer is not a desktop. For cloud-init, choose credentials specific to that VM. Memory allocated to VMs must leave room for the PVE services within the environment's RAM budget.
+Use an **ARM64/aarch64** guest image, CPU `host`, UEFI/OVMF, a persistent EFI variables disk and a VirtIO/SCSI disk. `vmbr0` is the tested private bridge. The headless Debian cloud image uses `serial0` as its default console; its inactive graphical framebuffer is not a desktop. For cloud-init, choose credentials specific to that VM. Memory allocated to VMs must leave room for PVE services and the NAS.
+
+For a Windows experiment, use Microsoft's [Windows 11 ARM64 ISO](https://www.microsoft.com/software-download/windows11arm64), rather than the x64 installer. Microsoft's [VM requirements](https://learn.microsoft.com/windows/whats-new/windows-11-requirements#virtual-machine-support) include at least 4 GB RAM, 64 GB storage, two virtual processors, Secure Boot capability and a virtual TPM. The phone's ARM KVM cannot execute an x64 Windows kernel. ARM64 Windows installation and its virtual-device drivers remain unvalidated in this project.
 
 The device tests covered:
 

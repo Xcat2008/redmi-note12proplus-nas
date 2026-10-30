@@ -22,12 +22,24 @@ def configure(host,guest):
     if not (guest/'usr/bin/pvesh').is_file():raise ValueError('Missing clean Proxmox package installation')
     if (guest/'var/lib/pve-cluster/config.db').exists():raise ValueError('Refusing an initialized account/VM database')
     if (host/'var/lib/redmi-nas/personalized').exists():raise ValueError('Refusing a personalized NAS')
+    put(host,'/usr/local/sbin/redmi-proxmox-control',Path(__file__).with_name('control.py').read_text(),0o755)
     put(guest,'/etc/hostname','redmi-pve\n')
     put(guest,'/etc/hosts','127.0.0.1 localhost\n172.17.0.250 redmi-pve.local redmi-pve\n::1 localhost ip6-localhost\n')
     resolver=guest/'etc/resolv.conf'
     if resolver.is_symlink():resolver.unlink()
     put(guest,'/etc/resolv.conf','nameserver 1.1.1.1\nnameserver 9.9.9.9\n')
     put(guest,'/etc/network/interfaces','auto lo\niface lo inet loopback\n\nauto host0\niface host0 inet static\n    address 172.17.0.250/16\n    gateway 172.17.0.1\n\nauto vmbr0\niface vmbr0 inet static\n    address 10.77.0.1/24\n    bridge-ports none\n    bridge-stp off\n    bridge-fd 0\n')
+    put(guest,'/usr/local/sbin/redmi-pve-register-network',Path(__file__).with_name('network-config.py').read_text(),0o755)
+    put(guest,'/etc/systemd/system/redmi-pve-register-network.service','''[Unit]
+Description=Register the private guest bridge after initial PVE setup
+After=pve-cluster.service pvedaemon.service pveproxy.service redmi-pve-network.service
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/redmi-pve-register-network
+[Install]
+WantedBy=multi-user.target
+''')
     put(guest,'/usr/local/sbin/redmi-pve-network','''#!/bin/sh
 set -eu
 ip link set host0 up
@@ -96,7 +108,7 @@ ExecStart=/usr/local/sbin/redmi-proxmox-scope-mounts
 [Install]
 WantedBy=multi-user.target
 ''')
-    for name in ['redmi-pve-network','redmi-proxmox-vm-network','redmi-proxmox-scoped-metrics']:
+    for name in ['redmi-pve-network','redmi-proxmox-vm-network','redmi-proxmox-scoped-metrics','redmi-pve-register-network']:
         subprocess.run(['systemctl','--root='+str(guest),'enable',name+'.service'],check=True,capture_output=True)
     for name in ['corosync','pve-ha-crm','pve-ha-lrm','watchdog-mux','pve-firewall','proxmox-firewall']:
         subprocess.run(['systemctl','--root='+str(guest),'disable',name+'.service'],check=False,capture_output=True)
@@ -130,8 +142,8 @@ NotifyAccess=all
 Delegate=yes
 CPUAffinity=0 1 2 3 4 5 6 7
 CPUQuota=800%
-MemoryMax=3G
-MemorySwapMax=1G
+MemoryMax=infinity
+MemorySwapMax=infinity
 TasksMax=2048
 Nice=5
 KillMode=mixed

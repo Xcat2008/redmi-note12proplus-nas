@@ -55,6 +55,35 @@ class FirmwareSafety(unittest.TestCase):
         data=fixture();result,receipt=firmware.transform_vendor(data,'6.12.0')
         self.assertEqual(result,data);self.assertFalse(receipt['workaround_active'])
 
+    def test_unreviewed_secure_variant_preserves_both_runtime_files(self):
+        with tempfile.TemporaryDirectory() as folder:
+            base=Path(folder); original=fixture()
+            hashes={name:__import__('hashlib').sha256(original).hexdigest()
+                    for name in firmware.SUPPORTED_VENDOR_SHA256}
+            for name in hashes:
+                (base/name).write_bytes(b'previous runtime')
+                (base/(name+'.redmi-vendor')).write_bytes(original)
+            (base/'AAVMF_CODE.secboot.fd.redmi-vendor').write_bytes(b'unreviewed')
+            with patch.object(firmware,'SUPPORTED_VENDOR_SHA256',hashes), patch.object(firmware,'SUPPORTED_SHA256',set(hashes.values())):
+                with self.assertRaisesRegex(ValueError,'digest'):
+                    firmware.process_variants(base,base/'state','4.19.191-test',True)
+            for name in hashes:self.assertEqual((base/name).read_bytes(),b'previous runtime')
+            self.assertFalse((base/'state').exists())
+
+    def test_both_reviewed_variants_receive_only_the_entry_fix(self):
+        with tempfile.TemporaryDirectory() as folder:
+            base=Path(folder); original=fixture()
+            hashes={name:__import__('hashlib').sha256(original).hexdigest()
+                    for name in firmware.SUPPORTED_VENDOR_SHA256}
+            for name in hashes:(base/(name+'.redmi-vendor')).write_bytes(original)
+            with patch.object(firmware,'SUPPORTED_VENDOR_SHA256',hashes), patch.object(firmware,'SUPPORTED_SHA256',set(hashes.values())):
+                receipt=firmware.process_variants(base,base/'state','4.19.191-test',True)
+            self.assertEqual(len(receipt['variants']),2)
+            for name in hashes:
+                data=(base/name).read_bytes()
+                self.assertEqual(data[:16],original[:16]);self.assertEqual(data[20:],original[20:])
+                self.assertEqual((base/(name+'.redmi-vendor')).read_bytes(),original)
+
 
 class ProfileBoundary(unittest.TestCase):
     def baseline(self):

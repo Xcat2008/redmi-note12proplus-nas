@@ -4,6 +4,7 @@ import type { SVGProps } from "react";
 import type { getEnergyStatus } from "@/lib/server/modules/system/energy-profiles";
 import { SETTINGS_PANEL_INSET } from "@/modules/settings/components/panel/surface";
 import { cn } from "@/lib/utils";
+import { ProxmoxSetupCard } from "./proxmox-setup-card";
 
 type Status = Awaited<ReturnType<typeof getEnergyStatus>>;
 const choices = [
@@ -135,5 +136,6 @@ export function PerformanceSection() {
         <p className="text-muted-foreground">{data.memoryExtension.kvmAvailable ? "KVM device detected. Guest compatibility still needs checking." : "KVM hardware virtualisation is unavailable in the current kernel. Extra swap does not enable it."}</p>
       </div>
     </>}
+    <ProxmoxSetupCard />
   </div>;
 }

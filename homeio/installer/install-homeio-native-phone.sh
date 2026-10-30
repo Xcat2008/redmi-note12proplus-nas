@@ -41,6 +41,7 @@ test ! -e "${INSTALL_DIR}"
 git clone --depth=1 --branch "${REPO_BRANCH}" "${REPO_URL}" "${INSTALL_DIR}"
 project_root=$(cd "$(dirname "$(readlink -f "$0")")/../.." && pwd)
 cp -a "$project_root/homeio/new-files/." "$INSTALL_DIR/"
+install -m755 "$project_root/apps/proxmox/control.py" /usr/local/sbin/redmi-proxmox-control
 git -C "$INSTALL_DIR" apply --check "$project_root/homeio/runtime-profile.patch"
 git -C "$INSTALL_DIR" apply "$project_root/homeio/runtime-profile.patch"
 python3 - "$INSTALL_DIR" <<'PY'

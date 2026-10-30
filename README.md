@@ -43,6 +43,8 @@ The source update adds native Mali Vulkan presentation, CPU-tier placement, boun
 
 The consolidated [native gaming profile](docs/NATIVE-GAMING.md) adds independent Steam launch, update/recovery handling and clean-image setup. Another unattended full NAS reboot passed on 28 October 2026. The candidate remains a developer validation build.
 
+The next candidate corrects the browser launch pages and Sunshine shortcut, adds optional Proxmox setup in Homeio Settings, shares the host RAM with Proxmox, and fixes both UEFI firmware variants. These changes have been exercised on the project NAS; the downloadable image is still being assembled from clean sources.
+
 ## Proxmox and hardware virtual machines
 
 The configured Redmi now runs **Proxmox VE 9.2.20 ARM64 with hardware KVM**. A full Debian 13 guest with eight vCPUs passed calculation on all eight physical cores, disk persistence, private networking, web-console and restart checks. The old kernel's mixed-cluster cache mismatch is handled by the scoped QEMU compatibility adapter.

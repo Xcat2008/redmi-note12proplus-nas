@@ -130,6 +130,7 @@ compose=Path('/var/lib/redmi-retroarch-homeio/docker-compose.yml')
 s=compose.read_text().replace("- '3011'", "- '"+str(Path('/dev/uinput').stat().st_gid)+"'")
 compose.write_text(s)
 PY
+python3 "$repo/scripts/lib/gaming-web-assets.py" --public "$repo/homeio/new-files/public"
 nginx -t
 systemctl reload nginx
 systemctl daemon-reload

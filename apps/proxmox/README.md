@@ -15,7 +15,7 @@ The next 0.2 validation candidate stages clean packages with `prepare-profile.py
 | `runtime/redmi-kvm-cache-affinity.c` | Keeps only the legacy cache-description KVM ioctls on a consistent A78 CPU; normal guest execution remains free to use the eight CPUs |
 | `runtime/kvm-launcher.sh` | Loads that compatibility library for the isolated QEMU launcher, preserving its original executable and argv |
 | `runtime/refresh-cache-compat.py` | Restores the launcher after package maintenance |
-| `runtime/firmware_compat.py` | Checks the known EDK2 code image and avoids its failing early identity map; the original package file is retained |
+| `runtime/firmware_compat.py` | Checks both known EDK2 code variants, including Secure Boot, and avoids their failing early identity map; original package files are retained |
 | `runtime/Drive.pm` | Uses the normal non-io_uring disk fallback on the old phone kernel |
 | `runtime/ProcFSTools.pm` | Identifies the heterogeneous CPU layout and handles the unavailable CPU-full PSI counter; memory/load scoping still requires LXCFS |
 | `validation.json` | Sanitized functional-test scope and remaining limits |

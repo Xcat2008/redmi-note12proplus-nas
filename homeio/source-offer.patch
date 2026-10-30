@@ -1,0 +1,17 @@
+--- a/modules/settings/components/settings.tsx
++++ b/modules/settings/components/settings.tsx
+@@ -145,6 +145,14 @@
+           <span className="mt-0.5 block text-[11px] text-muted-foreground/60">
+             {settingsBackend.general.appVersion} · {settingsBackend.general.platform}
+           </span>
++          <a
++            href="/source-information.html"
++            target="_blank"
++            rel="noopener noreferrer"
++            className="mt-2 block text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
++          >
++            Source &amp; licences
++          </a>
+         </div>
+       </aside>
+ 

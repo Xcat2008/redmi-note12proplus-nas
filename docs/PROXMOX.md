@@ -60,7 +60,7 @@ The disk wrapper selects PVE's normal alternative when `io_uring` is unavailable
 
 1. Start with the exact device and a working native Linux NAS. See [installation](INSTALLATION.md).
 2. The boot chain must actually provide EL2, and a matching device kernel plus matching hardware modules must expose working KVM. The [configuration fragment](../kernel/kvm/experimental.config.fragment) alone cannot do this. The device test involved platform boot-metadata changes that are **not** performed by the normal NAS installer or the public maintenance updater.
-3. In the forthcoming image, open **Homeio Settings → Performance → Virtual machines · Proxmox**. The optional setup checks the actual KVM capability before enabling the clean isolated userspace, private network and scoped metrics. It does not replace the host LXC or activate EL2.
+3. In the experimental rc3 image, open **Homeio Settings → Performance → Virtual machines · Proxmox**. The optional setup checks the actual KVM capability before enabling the clean isolated userspace, private network and scoped metrics. It does not replace the host LXC or activate EL2.
 4. On that existing environment, use the [guarded compatibility updater](../apps/proxmox/README.md). Its preflight rejects a normal non-KVM NAS and an invocation on the NAS host.
 5. Create credentials for that installation. Use the Linux PAM realm for an account created inside the Proxmox environment. No project password, account database, SSH key or configured VM is provided.
 6. Repeat the guest validation before relying on the profile.
@@ -88,16 +88,16 @@ These are short functional tests, not long-duration stress certification. [Sanit
 
 A supervised rc2 reinstall, automatic NAS first boot, optional Proxmox activation and full phone reboot have now passed on the project phone. This phone already had EL2 enabled; these results do not validate activation on a stock device. Nested PVE LXC, Windows ARM, GPU passthrough, HA and Ceph remain unvalidated. x86 Windows/Linux cannot use ARM KVM as native hardware virtualization. No automatic backup job is enabled by this source package.
 
-## Before a KVM image release
+## Stock-device activation and release scope
 
-The next image profile must be assembled from a clean base, carry these sources and matching modules, provision each installation's own credentials, and pass a supervised physical install and full reboot with recovery available. The boot-metadata activation needs its own device/layout checks and recovery validation. Redistribution/corresponding-source checks must also be completed. Until then, the existing image manifest stays unapproved and unchanged.
+The public rc3 release provides the clean optional userspace, matching kernel/modules, source inventory and corresponding-source archives. It retains the physically tested rc2 boot/layout. It does not claim a full physical rc3 reinstall or a second-device test. Its ordinary NAS installer does not enable EL2 on a stock platform.
+
+Read the [bootloader → NAS → EL2/KVM → Proxmox guide (Portuguese)](KVM-ACTIVATION.pt-PT.md) for the actual stages and diagnostic results. A public EL2 activator with per-device metadata backup, model/layout checks and recovery validation remains unfinished. Do not use the author's partition table on another unit. The [distribution review](DISTRIBUTION-REVIEW.pt-PT.md) records the separate licence and boot-workaround questions.
 
 `prepare-profile.py` and `setup-preloaded.py` are validation-stage tools for the clean optional userspace. The first refuses a personalized NAS or an initialized PVE account database; the second refuses missing KVM, unknown CPU/kernel profiles, existing roots it does not own and conflicting private networking. Its check-only invocation does not change configuration. It does not activate EL2, write phone boot metadata, install a kernel or create a VM. The activation tool passed after the supervised clean-device test, but it does not implement the missing stock-device EL2 activation.
 
 ## Português
 
-No telemóvel do projeto, o Proxmox já está instalado e utiliza os oito núcleos. No GitHub estão as correções e os resultados técnicos. A rc7 não inclui este perfil; a candidata 0.2 em preparação acrescenta os pacotes limpos e o kernel/módulos correspondentes, com o serviço desligado. Descarregar o repositório não transforma um aparelho sem EL2 numa plataforma KVM pronta.
+A rc3 pública inclui o kernel/módulos correspondentes e a base limpa opcional do Proxmox, desligada. No telefone do projeto passaram uma VM Linux de oito CPUs, disco, rede, consola e reinício. O teste limpo rc2 aconteceu num telefone que já tinha EL2 preparado; não valida a ativação EL2 num aparelho de origem. A rc3 mantém o boot/layout dessa referência e acrescenta userspace testado, sem alegar uma nova reinstalação física completa.
 
-A proposta de distribuição é deixar o Proxmox como componente opcional numa plataforma KVM compatível. A entrada na loja e a instalação automática de raiz ainda não estão implementadas. O atualizador publicado destina-se apenas a um Proxmox isolado que já funciona; por defeito, verifica sem instalar. Não altera o arranque do telefone e não copia as contas do autor.
-
-A rc2 foi reconstruída separadamente e passou a instalação limpa, a ativação opcional do Proxmox, uma VM de oito CPUs e o reinício completo. Continua por fazer a ativação EL2 automática num aparelho de origem e a revisão de distribuição antes da imagem pública. Os testes de VMs, disco, rede, consola e utilização dos oito CPUs já passaram no telefone do projeto.
+O [guia de ativação](KVM-ACTIVATION.pt-PT.md) explica o que o desbloqueio Xiaomi permite, como verificar KVM e como preparar o Proxmox nas definições do Homeio. A NAS funciona sem esse componente. Falta concluir e validar o ativador público da plataforma EL2; não há instruções implícitas que o utilizador tenha de adivinhar.

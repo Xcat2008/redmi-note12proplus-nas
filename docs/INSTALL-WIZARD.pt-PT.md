@@ -14,6 +14,8 @@ Esta versão é experimental e destina-se exclusivamente ao Redmi Note 12 Pro+ 5
 
 Em Definições → Performance → Máquinas virtuais, o Homeio verifica KVM antes de preparar o Proxmox. A base ARM64 limpa está incluída, mas começa desligada. O telefone do projeto tem EL2 previamente preparado; desbloquear o bootloader, por si só, não garante EL2. Esta release não altera automaticamente os metadados de arranque para o ativar num aparelho de origem. Não instala um kernel Proxmox genérico. A NAS pode ser utilizada sem Proxmox.
 
+O [guia bootloader → NAS → EL2/KVM → Proxmox](KVM-ACTIVATION.pt-PT.md) explica cada etapa, as verificações e a limitação atual: ainda falta um ativador EL2 público validado. Não é uma configuração que o utilizador tenha de descobrir sozinho.
+
 ## Âmbito do teste e recuperação
 
 A rc2 passou a instalação física supervisionada no telefone do projeto. A rc3 mantém esse boot/layout e acrescenta userspace verificado no aparelho; não foi repetida uma instalação física completa da rc3 nem um teste num segundo aparelho. As cópias pessoais automáticas e opções de bateria/extensão de memória começam desligadas.

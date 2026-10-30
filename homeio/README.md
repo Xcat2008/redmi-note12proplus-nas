@@ -8,6 +8,10 @@ The new reader has four fixture tests. On the working device those tests, ESLint
 
 `installer/` archives the reviewed upstream installer functions plus the phone-specific installation sequence. The generic PC OS overlay is deliberately skipped so Droidian networking, vendor integration and logind survive. The wrapper expects an already working systemd/Droidian port, Docker, apt and network access; install prerequisites include git, curl, certificates, build tools, nginx, Avahi, Samba and PostgreSQL support. It creates a fresh Homeio environment and refuses an existing `/opt/home-server`. Review its dependency requirements and upstream changes before use. The wrapper was made path-portable for publication but has not been re-run on a fresh device.
 
+## Corresponding source offer
+
+For new installations, the native installer applies `source-offer.patch` after `runtime-profile.patch`. Settings then links to a local source/licence page. `installer/export-corresponding-source.py` exports the installed patched tracked Homeio files plus the explicit source overlay, before private environment/database creation. It does not recursively copy the runtime directory. Regenerate the archive after modifying the installed application. This follow-up source change does not retroactively update the published rc3 image. Run `python3 -m unittest discover -s homeio/installer -p test_source_export.py -v` to verify source inclusion, private-data exclusions and symlink rejection.
+
 ## Persistent Jellyfin catalog compatibility
 
 Apply `jellyfin-hardware-compat.patch` to the same v1.10.3 checkout and copy its two new files from `new-files/`. This adds a narrowly scoped compose-materialization hook. It reads `/etc/homeio/hardware-profile`; only the explicit `redmi-ruby-nas` profile and the normal Jellyfin app/known Jellyfin image names enable software video mode. Raspberry Pi GPU device nodes and the Broadcom library mount are removed each time the stack is rendered. Other apps/devices and the NVIDIA variant are unchanged.

@@ -73,6 +73,8 @@ A caixa 3D é um projeto pessoal separado e não faz parte deste repositório. T
 
 O perfil GitHub Sponsors do autor aguarda aprovação. O link de apoio será acrescentado quando estiver ativo.
 
+Antes de associar apoios à distribuição, consulta a [revisão de licenças e distribuição](docs/DISTRIBUTION-REVIEW.pt-PT.md): a rc3 inclui um núcleo com restrições comerciais, que a licença do projeto não substitui. O [guia EL2/KVM](docs/KVM-ACTIVATION.pt-PT.md) explica também a etapa de ativação ainda por concluir para aparelhos de origem.
+
 O trabalho usa software criado por várias comunidades. Os agradecimentos e respetivos links estão em [CREDITS.md](CREDITS.md), em especial **Droidian, Debian, Halium, libhybris, Linux e Homeio**. A autoria deste projeto é a integração e adaptação feita por José Miranda; não é a autoria desses sistemas.
 
 [Documentação principal em inglês](README.md) · [Licenças](LICENSE.md)

@@ -44,6 +44,8 @@ cp -a "$project_root/homeio/new-files/." "$INSTALL_DIR/"
 install -m755 "$project_root/apps/proxmox/control.py" /usr/local/sbin/redmi-proxmox-control
 git -C "$INSTALL_DIR" apply --check "$project_root/homeio/runtime-profile.patch"
 git -C "$INSTALL_DIR" apply "$project_root/homeio/runtime-profile.patch"
+git -C "$INSTALL_DIR" apply --check "$project_root/homeio/source-offer.patch"
+git -C "$INSTALL_DIR" apply "$project_root/homeio/source-offer.patch"
 python3 - "$INSTALL_DIR" <<'PY'
 from pathlib import Path
 import json, sys
@@ -56,6 +58,10 @@ p=base/'package.json';data=json.loads(p.read_text(encoding='utf-8'))
 data['scripts']['build']='next build --webpack && npm run build:server'
 p.write_text(json.dumps(data,indent=2)+'\n')
 PY
+# Export the patched source before private environment/database creation.
+python3 "$project_root/homeio/installer/export-corresponding-source.py" \
+ "$INSTALL_DIR" "$project_root/homeio/new-files" \
+ "$INSTALL_DIR/public/homeio-corresponding-source.tar.gz"
 ensure_directories
 # Retain Droidian's vendor, USB, NetworkManager and logind configuration.
 # The generic PC OS overlay is intentionally not deployed on this phone.

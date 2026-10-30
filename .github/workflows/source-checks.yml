@@ -21,6 +21,8 @@ jobs:
         run: python3 -m unittest discover -s image/tests -p 'test_download.py' -v
       - name: Fresh phone kernel module selection
         run: python3 -m unittest discover -s kernel/kvm -p 'test*.py' -v
+      - name: Corresponding source export excludes private runtime data
+        run: python3 -m unittest discover -s homeio/installer -p 'test_source_export.py' -v
       - name: Native Steam bootstrap safety checks
         run: python3 -m unittest discover -s apps/steam -p 'test*.py' -v
       - name: Proxmox compatibility regression checks

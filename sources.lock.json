@@ -66,11 +66,15 @@
     "note": "Historical device-specific build fingerprint only; not a downloadable release."
   },
   "public_release": {
-    "kind": "source-patches-live-captures-and-installer-source",
-    "flashable_image": false,
+    "kind": "experimental-clean-image-and-corresponding-source",
+    "tag": "v0.2.0-rc3",
+    "url": "https://github.com/Xcat2008/redmi-note12proplus-nas/releases/tag/v0.2.0-rc3",
+    "flashable_image": true,
     "clean_second_device_install_verified": false,
     "clean_image_candidate_built": true,
-    "physical_candidate_install_verified": false
+    "physical_candidate_install_verified": false,
+    "physical_rc2_baseline_install_verified": true,
+    "stock_device_el2_activation_automated": false
   },
   "mediatek_video": {
     "profile": "mediatek-ion-v4l2-h264-v1",

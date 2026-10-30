@@ -114,6 +114,8 @@ This is an independent community experiment, not an official Xiaomi, Droidian or
 
 The author’s GitHub Sponsors application is awaiting approval. A support link will be added when the profile is live. Contributions will support José Miranda’s work on this project; please also consider supporting the upstream projects listed in [credits](CREDITS.md).
 
+Before linking funding to the distribution, read the [distribution and licence review (Portuguese)](docs/DISTRIBUTION-REVIEW.pt-PT.md). The rc3 image includes a core with noncommercial restrictions, which the integration licence does not override. The [EL2/KVM activation guide (Portuguese)](docs/KVM-ACTIVATION.pt-PT.md) distinguishes bootloader unlock, NAS installation and the still-unimplemented public stock-device EL2 activation step.
+
 Contributions, reproducible bug reports and documentation improvements are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md) before posting logs.
 
 ## License

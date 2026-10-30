@@ -108,7 +108,7 @@ for port,upstream,title in [(3443,'http://127.0.0.1:3300','RetroArch'),
   proxy_http_version 1.1;
   proxy_set_header Upgrade $http_upgrade;
   proxy_set_header Connection "upgrade";
-  proxy_set_header Host $host;
+  proxy_set_header Host $http_host;
   proxy_set_header Cookie "";
   proxy_read_timeout 3600s;
   proxy_send_timeout 3600s;

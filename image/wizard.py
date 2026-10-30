@@ -133,9 +133,11 @@ class Wizard:
                 self.log.configure(state='normal');self.log.insert('end',data);self.log.see('end');self.log.configure(state='disabled')
             elif kind=='verified':
                 self.manifest=data
-                ready=data.get('physical_install_test_passed') and data.get('binary_redistribution_audit_passed')
+                ready=installer.release_ready(data)
                 self.status.set('Pacote verificado. '+('Preenche a configuração e liga o Redmi em FASTBOOT.' if ready else 'Candidato de testes: instalação normal bloqueada.'))
-                self.detail.set(data['version']+' · '+data['device']+'\n'+('Versão aprovada para instalação.' if ready else 'Ainda faltam validação física e aprovação de distribuição. A verificação do pacote não valida o arranque num telefone.'))
+                preview=data.get('release_channel')=='experimental' and not data.get('physical_install_test_passed')
+                message=('Pré-release experimental: arranque e instalação de base testados na rc2; correções de aplicações verificadas no aparelho. Esta revisão não teve uma nova reinstalação completa.' if preview else 'Pacote com instalação física validada.') if ready else 'Ainda faltam verificações de instalação ou distribuição. A verificação do pacote não valida o arranque num telefone.'
+                self.detail.set(data['version']+' · '+data['device']+'\n'+message)
             elif kind=='error':self.status.set('Operação interrompida. Consulta a mensagem.');messagebox.showerror('Redmi NAS',data)
             elif kind=='installed':
                 self.status.set('Linux configurado. A instalação dos serviços continua no telefone quando houver Internet.')
@@ -144,7 +146,7 @@ class Wizard:
             elif kind=='done':
                 self.busy=False;self.progress.stop()
                 for button in (self.verify,self.choose):button.configure(state='normal')
-                ready=self.manifest and self.manifest.get('physical_install_test_passed') and self.manifest.get('binary_redistribution_audit_passed')
+                ready=self.manifest and installer.release_ready(self.manifest)
                 for button in (self.install,self.setup):button.configure(state='normal' if ready else 'disabled')
         self.root.after(100,self.drain)
 

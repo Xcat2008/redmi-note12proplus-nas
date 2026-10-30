@@ -19,6 +19,7 @@ import zipfile
 
 HERE=Path(sys.executable).resolve().parent if getattr(sys,'frozen',False) else Path(__file__).resolve().parent
 SDK_URL='https://dl.google.com/android/repository/platform-tools-latest-windows.zip'
+VALIDATED_RC2_BOOT_SHA256='0295f05fbda8cefad915e8ffb3400ffa7a8abe6b1d91889242242ceb615b9792'
 
 def checksum(path):
     digest=hashlib.sha256()
@@ -152,9 +153,25 @@ def personal_fields():
 def require_release(manifest,allow_untested=False):
     if allow_untested:return
     if not manifest.get('physical_install_test_passed'):
-        raise ValueError('This candidate has not passed a clean physical installation test. Normal installation is disabled; use a tested release.')
+        baseline=manifest.get('baseline_validation',{})
+        reviewed_userland_preview=(manifest.get('release_channel')=='experimental'
+            and baseline.get('version')=='0.2.0-rc2'
+            and baseline.get('boot_sha256')==VALIDATED_RC2_BOOT_SHA256
+            and manifest.get('files',{}).get('boot.img',{}).get('sha256')==VALIDATED_RC2_BOOT_SHA256
+            and manifest.get('userdata_partition_bytes')==242019696640
+            and manifest.get('required_slot')=='a'
+            and manifest.get('requires_linux_vbmeta') is False
+            and baseline.get('installation_mechanism_verified') is True
+            and baseline.get('userland_changes_verified_on_device') is True)
+        if not reviewed_userland_preview:
+            raise ValueError('This candidate has not passed a clean physical installation test or a scoped userland-preview validation. Normal installation is disabled; use a tested release.')
     if not manifest.get('binary_redistribution_audit_passed'):
         raise ValueError('This package has not passed the binary redistribution review. Normal installation is disabled.')
+
+
+def release_ready(manifest):
+    try:require_release(manifest);return True
+    except ValueError:return False
 
 def personalize(fields,timeout=240):
     import serial

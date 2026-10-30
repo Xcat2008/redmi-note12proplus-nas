@@ -68,6 +68,32 @@ class SetupFields(unittest.TestCase):
 
 
 class ReleaseBoundary(unittest.TestCase):
+    def preview(self):
+        return {'release_channel':'experimental','physical_install_test_passed':False,
+            'binary_redistribution_audit_passed':True,'required_slot':'a',
+            'requires_linux_vbmeta':False,'userdata_partition_bytes':242019696640,
+            'files':{'boot.img':{'sha256':installer.VALIDATED_RC2_BOOT_SHA256}},
+            'baseline_validation':{'version':'0.2.0-rc2','boot_sha256':installer.VALIDATED_RC2_BOOT_SHA256,
+                'installation_mechanism_verified':True,'userland_changes_verified_on_device':True}}
+
+    def test_scoped_preview_does_not_claim_a_new_physical_install(self):
+        manifest=self.preview();installer.require_release(manifest)
+        self.assertTrue(installer.release_ready(manifest))
+        self.assertFalse(manifest['physical_install_test_passed'])
+
+    def test_preview_cannot_introduce_an_unvalidated_boot_or_layout(self):
+        for field,value in [('required_slot','b'),('requires_linux_vbmeta',True),('userdata_partition_bytes',100),('release_channel','stable')]:
+            manifest=self.preview();manifest[field]=value
+            with self.subTest(field=field),self.assertRaisesRegex(ValueError,'not passed'):installer.require_release(manifest)
+        manifest=self.preview();manifest['files']['boot.img']['sha256']='0'*64
+        with self.assertRaisesRegex(ValueError,'not passed'):installer.require_release(manifest)
+
+    def test_preview_still_requires_distribution_and_live_userland_checks(self):
+        manifest=self.preview();manifest['binary_redistribution_audit_passed']=False
+        with self.assertRaisesRegex(ValueError,'redistribution'):installer.require_release(manifest)
+        manifest=self.preview();manifest['baseline_validation']['userland_changes_verified_on_device']=False
+        with self.assertRaisesRegex(ValueError,'not passed'):installer.require_release(manifest)
+
     def test_binary_review_required_even_after_physical_install(self):
         with self.assertRaisesRegex(ValueError,'redistribution'):
             installer.require_release({'physical_install_test_passed':True,'binary_redistribution_audit_passed':False})

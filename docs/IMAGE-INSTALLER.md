@@ -2,6 +2,8 @@
 
 ## Current state
 
+The next experimental preview keeps the exact rc2 boot image and installation layout. Its browser-entry and optional-Proxmox changes have been tested on the running device. The installer can accept this narrowly scoped userspace update after the distribution checks pass, without claiming that the revised data image received another complete physical reinstall. Its manifest keeps `physical_install_test_passed: false` and records the inherited baseline separately. A different kernel, slot, AVB policy or partition layout cannot use that exception. The assistant identifies this as an experimental preview before installation.
+
 A clean candidate has been assembled separately from the author’s working NAS. It consists of an Android-format `boot.img`, a sparse `userdata.img`, and a Windows installer. A phone does not boot a PC-style ISO.
 
 **The corrected rc2 passed a supervised clean installation and automatic NAS first boot on the project phone. It is not yet a public ready-to-flash release.** The distribution image was built separately; the phone was erased only to validate it. Binary redistribution review and stock-device EL2 activation remain incomplete. The [sanitized validation record](../image/validation-rc2.json) states the exact test scope.

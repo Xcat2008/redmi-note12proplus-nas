@@ -31,25 +31,21 @@ O aparelho tem 8 GiB de RAM física; o Linux apresenta cerca de 7,4 GiB após as
 
 ## Melhorias recentes
 
-A atualização de código acrescenta apresentação Vulkan na Mali, distribuição da emulação pelos núcleos rápidos, redução de imagens repetidas e correções de estabilidade do kernel e do arranque. As [notas técnicas de desempenho e estabilidade](docs/PERFORMANCE.md) documentam as medições e os limites de temperatura, sem overclock. Estas alterações ainda não constituem uma nova imagem limpa pronta a instalar.
+**[Descarregar 0.2.0-rc3 — versão experimental](https://github.com/Xcat2008/redmi-note12proplus-nas/releases/tag/v0.2.0-rc3).** Inclui imagem limpa, assistente Windows e um programa de descarga que verifica e junta as partes automaticamente.
 
-## Proxmox e máquinas virtuais
-
-O Redmi do projeto já tem **Proxmox VE 9.2.20 ARM64 com aceleração KVM**. Foi testada uma VM Debian 13 com oito CPUs virtuais, com cálculo real nos oito núcleos físicos, persistência no disco, rede, consola web e reinício. A adaptação do QEMU resolve a inconsistência de cache entre os A55 e os A78 neste kernel.
-
-As [instruções e o estado dos testes](docs/PROXMOX.md) e o [código das correções](apps/proxmox/README.md) estão publicados. É um perfil experimental e opcional: a rc7 não o inclui; a candidata 0.2 em preparação acrescenta a base Proxmox limpa, desligada, e o kernel/módulos KVM correspondentes. A reinstalação limpa supervisionada da rc2, o arranque automático da NAS, a ativação opcional do Proxmox, uma VM de oito CPUs e o reinício completo já passaram no telefone do projeto. A ativação EL2 num aparelho de origem continua por automatizar e validar.
-
-O [guia do assistente Windows](docs/INSTALL-WIZARD.pt-PT.md) explica o fluxo de descarga, verificação e configuração. O instalador gráfico mantém a instalação bloqueada nas candidatas não aprovadas. O primeiro arranque precisa de Internet para obter os programas de origem.
+A rc3 acrescenta codificação H.264 MediaTek no browser, mantém a composição Mali, recupera os núcleos disponíveis sem desativar proteções térmicas e corrige as páginas de abertura e as duas variantes UEFI do Proxmox. O teste da transmissão foi feito a 720p30; nem todas as etapas usam hardware. [Medições e limites](docs/SELKIES-MEDIATEK.md).
 
 ## Estado desta publicação
 
-Esta é uma **prévia técnica com código-fonte, configurações e notas de instalação**. A NAS funciona no aparelho do projeto. Também foi construída uma imagem limpa de arranque e dados, com um instalador para Windows, e a rc2 já passou a reinstalação supervisionada no telefone do projeto, sem reparações na configuração da NAS. Falta concluir a revisão de distribuição dos binários e a ativação EL2 de origem antes de anunciar uma solução pública completa. Consulta o [estado do instalador](docs/IMAGE-INSTALLER.md).
+Esta é uma **versão experimental**, destinada apenas ao **Redmi Note 12 Pro+ 5G 22101316UG / rubypro / 256 GB**, com firmware **OS2.0.16.0.UMOEUXM**, slot **a**, e bootloader previamente desbloqueado pela Xiaomi. A instalação apaga o telefone e precisa de Internet no primeiro arranque. Não é um atualizador de uma NAS existente.
 
-O aparelho usado é o **Redmi Note 12 Pro+ 5G, modelo 22101316UG (rubypro)**, com Dimensity 1080, 8 GiB de RAM física e 256 GB de armazenamento. Não usar imagens do modelo 4G ou de outro telemóvel.
+A rc2 passou a instalação física supervisionada. A rc3 mantém exatamente esse boot/layout e acrescenta userspace testado na NAS do projeto. Não foi repetida a instalação física completa da rc3 nem feito um teste num segundo aparelho. [Guia do assistente](docs/INSTALL-WIZARD.pt-PT.md) · [Âmbito da imagem](docs/IMAGE-INSTALLER.md).
 
-Confirmámos Linux nativo, Wi-Fi, Homeio, Docker ARM64, arranque automático e funcionamento da NAS com o ecrã apagado. O Jellyfin reproduz no browser e converte 1080p para 720p usando descodificação MediaTek, redimensionamento Mali e codificação H.264 MediaTek. O Bluetooth pode ser gerido em **Settings → Bluetooth**, no Homeio: ligar/desligar, procurar, emparelhar, ligar, desligar e esquecer dispositivos. A pesquisa e os controlos do rádio foram testados no browser; o emparelhamento e os botões de um comando Xbox também foram confirmados no aparelho do projeto. [Como usar](docs/BLUETOOTH.md). Hub, carregamento simultâneo com USB e discos externos ainda não foram ensaiados; SIM e câmaras não estão validados.
+A imagem é construída separadamente, sem redes, chaves privadas, sessões Steam, jogos, BIOS, filmes ou máquinas virtuais do autor. As fontes correspondentes a 1067 versões de componentes, licenças originais e SHA-256 acompanham a release.
 
-A Steam usa o cliente ARM64 oficial e abre em Big Picture, com composição pela Mali e um atalho separado do RetroArch no Homeio e no Moonlight. As correções de arranque, atualização e recuperação fazem parte do perfil de instalação. O reinício completo da NAS voltou a passar em 28 de outubro de 2026. A compatibilidade de todos os jogos da Steam não está certificada. [Perfil nativo e validação](docs/NATIVE-GAMING.md).
+Homeio, Jellyfin, RetroArch, Steam e Sunshine mantêm os perfis documentados. O Bluetooth pode ser gerido nas definições do Homeio; o comando Xbox foi testado no aparelho do projeto. A Steam abre em Big Picture com composição Mali; a compatibilidade de todos os seus jogos não está certificada. Hub, Ethernet e carregamento simultâneo foram exercitados; discos externos dependem da ligação, do adaptador e do disco.
+
+O Proxmox ARM64 vem como base limpa opcional e desligada, com preparação nas definições do Homeio. Só pode ser ativado com EL2/KVM realmente disponível. Desbloquear o bootloader não garante EL2, e a rc3 não o ativa automaticamente num aparelho de origem. A NAS funciona sem Proxmox. Memória extra em disco, cuidados opcionais de bateria e cópias pessoais automáticas começam desligados.
 
 ## Vídeo por hardware
 

@@ -1,54 +1,23 @@
-# Instalar a NAS no Redmi
+# Instalar a Redmi NAS 0.2.0-rc3
 
-O objetivo é descarregar um pacote, abrir o assistente no Windows e deixar a configuração inicial a cargo do instalador. Não é necessário compilar Linux nem copiar comandos de partições.
+Esta versão é experimental e destina-se exclusivamente ao Redmi Note 12 Pro+ 5G **22101316UG / rubypro / 256 GB**, com firmware **OS2.0.16.0.UMOEUXM** no slot **a**. Não usar noutros modelos, variantes 4G ou capacidades.
 
-**Estado atual: candidato de testes. Ainda não há uma versão aprovada para instalação pública.** O assistente permite verificar o pacote, mas mantém a instalação normal bloqueada enquanto a revisão de distribuição estiver pendente. A rc2 já passou a instalação física supervisionada e o arranque automático da NAS. A existência de um `.exe` não significa que esses testes já passaram.
+1. Desbloqueia previamente o bootloader com a ferramenta oficial Xiaomi e conclui a ativação da tua conta, se for pedida. O instalador não substitui o Mi Unlock. Guarda os dados: o desbloqueio e esta instalação apagam-nos.
+2. Descarrega **RedmiNAS-Download.exe** da release. Escolhe uma pasta com espaço livre; o programa descarrega as partes, confere os SHA-256, junta o ZIP e abre o assistente. Em alternativa, junta manualmente as partes numeradas do ZIP, por ordem, e extrai-o.
+3. Abre **RedmiNAS-Setup.exe**, escolhe a pasta do pacote e carrega em **Verificar**. Esta etapa não contacta o telefone. Preenche o modelo/firmware exigidos, escolhe um PIN Linux e, se quiseres, os dados Wi-Fi. O Windows precisa do Cliente OpenSSH para gerar uma chave individual.
+4. Liga apenas o telefone destinado à instalação diretamente ao PC por USB, sem o hub. Entra em **FASTBOOT** com Ligar + Volume −. O assistente exige um único telefone e verifica produto, slot, desbloqueio e tamanhos de partições. O modelo e firmware devem ser conferidos pelo utilizador; o produto fastboot não identifica sozinho todas as variantes.
+5. Lê e confirma o apagamento e carrega em **Instalar no telefone**. Se faltar fastboot, autoriza no assistente a descarga das Platform-Tools oficiais Google. Mantém o cabo ligado durante a gravação e a personalização USB. Não voltes a bloquear o bootloader.
+6. O Linux arranca, recebe a tua configuração e instala a NAS automaticamente. Mantém alimentação e Internet; não é uma instalação totalmente offline. Se a personalização USB não terminar, usa **Retomar configuração USB**, que não volta a gravar as partições.
+7. Na mesma rede, abre **http://redmi-nas.local** ou o IP atribuído pelo router e cria a tua conta Homeio. Steam e outras aplicações pedem as tuas próprias contas. Não vêm jogos, BIOS, filmes, sessões ou emparelhamentos.
 
-O primeiro teste supervisionado apagou e reinstalou o telefone do projeto, com autorização do proprietário. A personalização USB, o Wi-Fi e o Homeio arrancaram; esse teste revelou dependências e uma ordem de arranque que estão agora corrigidas no código. A repetição com a rc2 corrigida concluiu a instalação automática da NAS sem reparações no telefone. O wrapper de testes no PC precisou de retomar a personalização USB após uma dependência local em falta; não foi um teste físico completo dos cliques do assistente gráfico. Os dois modos de reinício, sem e com Proxmox ativado, passaram. [Registo dos testes](../image/validation-rc2.json).
+## Proxmox opcional
 
-## O telefone certo
+Em Definições → Performance → Máquinas virtuais, o Homeio verifica KVM antes de preparar o Proxmox. A base ARM64 limpa está incluída, mas começa desligada. O telefone do projeto tem EL2 previamente preparado; desbloquear o bootloader, por si só, não garante EL2. Esta release não altera automaticamente os metadados de arranque para o ativar num aparelho de origem. Não instala um kernel Proxmox genérico. A NAS pode ser utilizada sem Proxmox.
 
-Este perfil destina-se exclusivamente ao **Redmi Note 12 Pro+ 5G, modelo 22101316UG, 256 GB**, com firmware de origem **OS2.0.16.0.UMOEUXM**, slot `a`, e bootloader desbloqueado pela Xiaomi. O nome comercial, por si só, não chega: os modelos 4G, outras capacidades e outras variantes não estão validados.
+## Âmbito do teste e recuperação
 
-O desbloqueio e a instalação apagam dados. Guarda os ficheiros e dados das aplicações que pretendas manter. Conclui a ativação da tua conta Xiaomi, se o fabricante a pedir. O assistente não desbloqueia contas nem substitui o Mi Unlock.
+A rc2 passou a instalação física supervisionada no telefone do projeto. A rc3 mantém esse boot/layout e acrescenta userspace verificado no aparelho; não foi repetida uma instalação física completa da rc3 nem um teste num segundo aparelho. As cópias pessoais automáticas e opções de bateria/extensão de memória começam desligadas.
 
-## Quando houver uma versão aprovada
+Se a gravação falhar, conserva FASTBOOT e o erro do assistente. Não uses imagens de outro modelo ou um vbmeta genérico. Esta instalação usa userdata em ext4: repor só boot Android não restaura o sistema de fábrica. A recuperação completa exige o firmware oficial correspondente ao modelo e região e o respetivo procedimento validado.
 
-1. Descarrega o pacote da secção **Releases** deste repositório. Confirma que a versão está marcada como aprovada para o teu modelo. Não uses um pacote de testes para atualizar uma NAS com dados.
-2. Extrai o ZIP para uma pasta do PC, num disco com espaço. Não executes o programa de dentro do ZIP.
-3. Abre **RedmiNAS-Setup.exe**. Escolhe a pasta extraída e carrega em **Verificar**. O assistente confere tamanho, SHA-256 e estrutura das imagens, sem contactar o telefone.
-4. Preenche o modelo e o firmware exigidos. Escolhe o teu PIN Linux e, se quiseres, os dados do Wi-Fi. O assistente cria uma chave SSH nova no teu computador; não vem uma palavra-passe do autor.
-5. Desliga outros telefones do PC. No Redmi destinado à instalação, entra em **FASTBOOT** com Ligar + Volume − e liga-o diretamente por USB, sem o hub. O assistente exige um único telefone e verifica o produto, slot, desbloqueio e tamanhos das partições.
-6. Lê e aceita a confirmação de apagamento. Carrega em **Instalar no telefone**. Se forem necessárias as Platform-Tools, o assistente pede autorização para descarregar as ferramentas oficiais da Google. O instalador grava `userdata` e `boot_a` e preserva os metadados AVB do firmware original exigido. Não desligues o cabo nem feches o assistente durante a gravação.
-7. O Linux arranca e recebe a configuração pelo USB. Mantém o telefone alimentado e com acesso à Internet: o primeiro arranque descarrega os pacotes e configura a NAS. Não há contas Steam, jogos, BIOS, ficheiros pessoais ou emparelhamentos incluídos.
-8. Abre **http://redmi-nas.local** no PC da mesma rede e cria a tua conta Homeio. Se o nome não resolver, consulta o endereço do telefone na lista de dispositivos do router.
-
-O Cliente OpenSSH do Windows deve estar disponível para gerar a chave. O assistente informa se faltar. Não é necessário instalar Python para usar o executável distribuído; o código Python continua disponível para auditoria e manutenção.
-
-## Se a configuração USB não terminar
-
-Mantém o cabo ligado e usa **Retomar configuração USB** no assistente. Esta operação envia a configuração inicial; não volta a gravar `userdata` ou `boot`. Se já tiver sido concluída, o telefone não aceita uma nova personalização por esse serviço.
-
-Se a gravação falhar, guarda o erro apresentado e conserva o telefone em FASTBOOT. Não experimentes ficheiros de outros modelos nem voltes a bloquear o bootloader. Uma NAS instalada usa `userdata` em ext4; restaurar apenas a imagem de arranque Android não devolve o telefone ao estado de fábrica. Para recuperação completa é necessário o firmware oficial correspondente ao modelo/região e um procedimento validado para esse aparelho.
-
-Os metadados AVB do fabricante devem manter-se intactos. O teste físico do perfil 0.2.0-rc1 falhou quando estes foram substituídos por um `vbmeta.img` vazio e genérico; o mesmo novo arranque funcionou ao conservar os originais. Esse perfil foi retirado e o cliente corrigido rejeita-o antes de escrever dados. O bootloader continua a ter de estar desbloqueado, e o firmware original tem de corresponder exatamente ao indicado. A imagem de arranque Linux não tem uma assinatura de confiança da Xiaomi. A instalação física supervisionada da rc2 já passou; a verificação estrutural no PC continua a ser uma etapa diferente.
-
-## O que está incluído
-
-A candidata reúne Linux/Droidian, as adaptações de hardware e a configuração automática do Homeio, RetroArch, Steam e Sunshine. O perfil de vídeo Jellyfin está incluído e é aplicado quando o Jellyfin é instalado pela loja Homeio. Parte dos programas é descarregada de fontes oficiais no primeiro arranque, pelo que este não é um instalador totalmente offline. As aplicações e contas que exigem início de sessão continuam a ser configuradas por cada utilizador.
-
-As cópias pessoais automáticas, a extensão de memória no armazenamento e os controlos opcionais da bateria começam desligados. As proteções térmicas mantêm-se ativas.
-
-## Proxmox e máquinas virtuais
-
-O pacote em preparação inclui uma base Proxmox ARM64 limpa e as correções para os oito núcleos, como componente opcional. O serviço começa **desligado**, sem contas do autor e sem máquinas virtuais.
-
-Há uma condição adicional: o arranque tem de entregar o processador em **EL2**, e o kernel tem de expor KVM funcional. No telefone do projeto foi necessária uma alteração específica de metadados de arranque. A instalação normal **não aplica automaticamente essa alteração**. Instalar Linux ou selecionar uma opção não a substitui.
-
-Por isso, a candidata ainda não é uma solução pública de Proxmox de um clique. A ativação opcional e o reinício completo passaram no telefone do projeto, que já tinha EL2 preparado. A instalação da plataforma EL2 num aparelho de origem não foi automatizada nem validada por esse teste. Num ambiente que já tenha EL2/KVM validado, o preparador verifica a compatibilidade antes de ativar serviços e pede uma palavra-passe própria. Consulta o [estado técnico do Proxmox](PROXMOX.md).
-
-## Para quem vai testar a candidata
-
-O modo experimental por linha de comandos é apenas para uma instalação física supervisionada, com possibilidade de recuperar o aparelho. Não é um passo que os utilizadores normais devam seguir para contornar o bloqueio do assistente. O teste tem de registar a gravação, primeiro arranque, configuração, rede, serviços, reinício completo e recuperação. Os resultados só serão marcados como aprovados depois de terem acontecido.
-
-Projeto de José Miranda (Xcat2008), desenvolvido em Portugal. Os créditos dos projetos utilizados estão em [CREDITS.md](../CREDITS.md).
+Projeto de José Miranda (Xcat2008), desenvolvido em Portugal. Consulta [os créditos](../CREDITS.md) e [as licenças](../THIRD_PARTY_NOTICES.md).

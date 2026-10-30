@@ -39,25 +39,23 @@ The phone has 8 GiB of physical RAM. Linux reports about 7.4 GiB after platform 
 
 ## Latest development baseline
 
-The source update adds native Mali Vulkan presentation, CPU-tier placement, bounded duplicate-frame pacing and kernel/runtime stability fixes. [Technical measurements and integration limits](docs/PERFORMANCE.md) cover the current timing and thermal constraints. A refreshed clean image containing this baseline has not been released.
+**[Download 0.2.0-rc3 — experimental preview](https://github.com/Xcat2008/redmi-note12proplus-nas/releases/tag/v0.2.0-rc3).** The release provides a clean boot/data image, a Windows installation assistant and a small verified downloader. Exact target: **22101316UG / rubypro / 256 GB**, factory firmware **OS2.0.16.0.UMOEUXM**, slot **a**, bootloader already unlocked through Xiaomi.
 
-The consolidated [native gaming profile](docs/NATIVE-GAMING.md) adds independent Steam launch, update/recovery handling and clean-image setup. Another unattended full NAS reboot passed on 28 October 2026. The candidate remains a developer validation build.
-
-The next candidate corrects the browser launch pages and Sunshine shortcut, adds optional Proxmox setup in Homeio Settings, shares the host RAM with Proxmox, and fixes both UEFI firmware variants. These changes have been exercised on the project NAS; the downloadable image is still being assembled from clean sources.
+This revision adds MediaTek H.264 encoding for browser streaming, preserves native Mali composition, restores eligible CPU cores within platform safety limits, and fixes browser launch pages and both optional Proxmox UEFI variants. See [browser encoding measurements](docs/SELKIES-MEDIATEK.md), [energy policy](docs/ENERGY.md) and [native gaming](docs/NATIVE-GAMING.md).
 
 ## Proxmox and hardware virtual machines
 
 The configured Redmi now runs **Proxmox VE 9.2.20 ARM64 with hardware KVM**. A full Debian 13 guest with eight vCPUs passed calculation on all eight physical cores, disk persistence, private networking, web-console and restart checks. The old kernel's mixed-cluster cache mismatch is handled by the scoped QEMU compatibility adapter.
 
-The [Proxmox guide](docs/PROXMOX.md) and [compatibility source](apps/proxmox/README.md) are public. This remains an **experimental optional profile**: rc7 does not contain it; the next 0.2 candidate preloads a clean, disabled Proxmox base and matching KVM kernel/modules. Fresh EL2 activation and unattended installation are not released. The rc2 supervised clean installation now passed automatic NAS bootstrap, optional Proxmox activation and an eight-vCPU KVM smoke guest. Full phone restart passed both with and without Proxmox enabled. Stock-device EL2 activation remains separate.
+The [Proxmox guide](docs/PROXMOX.md) and [compatibility source](apps/proxmox/README.md) are public. This remains an **experimental optional profile**: rc3 preloads a clean, disabled Proxmox base and matching KVM kernel/modules. Homeio can prepare it only when real EL2/KVM is already available. Stock-device EL2 activation is not automated. The rc2 supervised clean installation now passed automatic NAS bootstrap, optional Proxmox activation and an eight-vCPU KVM smoke guest. Full phone restart passed both with and without Proxmox enabled. Stock-device EL2 activation remains separate.
 
 ## Release status
 
-**Developer preview. The NAS runs on the project device. A clean boot/data image and a guarded Windows installer have also been built, and rc2 passed a supervised physical clean install and automatic NAS first boot. Binary redistribution review and stock-device EL2 activation remain incomplete, so public binaries are not released.**
+The **rc3 release is experimental**, not a stable general-purpose phone image. It retains exactly the boot image and partition layout used in the supervised physical rc2 installation. Changed userspace was exercised on the project NAS; a new complete physical rc3 reinstall and a second-device test were not performed. The manifest records that distinction.
 
-The project phone was erased and reinstalled for this validation; a second device has not been tested. Public flash/personalization functions were used, with a host-side USB setup retry, followed by fully automatic NAS bootstrap. No phone installation repairs were needed. The candidate uses individual setup credentials rather than a copy of the author’s configured system. Read the [installer status](docs/IMAGE-INSTALLER.md) and [installation guide](docs/INSTALLATION.md) before deciding to replicate it.
+The image is built separately from unpersonalized sources. It contains no author Wi-Fi settings, private SSH keys, Steam session, games, console BIOS, media or configured VMs. Source archives for 1067 installed source versions, original license notices and SHA-256 manifests accompany the binaries. Each component retains its own license.
 
-The [Windows assistant guide](docs/INSTALL-WIZARD.pt-PT.md) describes the intended download, verification and setup flow. The graphical installer keeps unapproved candidates blocked. First setup still needs Internet for upstream programs; this is not a fully offline image.
+Start with the [Windows assistant guide](docs/INSTALL-WIZARD.pt-PT.md) and [image scope](docs/IMAGE-INSTALLER.md). Installation erases the phone and requires Internet for first setup. Xiaomi bootloader unlock is a prerequisite; optional Proxmox additionally requires EL2/KVM and is disabled by default.
 
 | Capability | Result on the project device |
 | --- | --- |
@@ -73,9 +71,9 @@ The [Windows assistant guide](docs/INSTALL-WIZARD.pt-PT.md) describes the intend
 | CPU energy profiles | Homeio controls Power saver / Balanced / Performance; corrected native policy, factory limits and automatic GPU/memory DVFS |
 | Steam Big Picture | Official native ARM64 client, separate Homeio/Moonlight entry and Mali composition; Steam games are not certified |
 | RetroArch PS2 adaptation | Native Mali backend and accepted presentation adapter; performance depends on software and temperature |
-| USB hub, simultaneous charging and external disks | Not yet tested |
+| USB hub and simultaneous charging | Ethernet and charging exercised on the project device; external disk reliability depends on the adapter, disk and USB connection |
 | Bluetooth | Homeio radio/discovery controls verified; Xbox pairing and in-game input confirmed on the project device |
-| Proxmox / KVM ARM64 | Eight-vCPU Debian guest tested on all physical cores; experimental source profile, not in the current image candidate |
+| Proxmox / KVM ARM64 | Eight-vCPU guest tested; clean optional base in rc3, disabled until KVM checks pass. Stock-device EL2 activation is separate |
 | SIM / mobile data and cameras | Not validated |
 | Jellyfin video acceleration | H.264 / HEVC / VP9 SDR decoding, Mali resize and H.264 encoding verified |
 

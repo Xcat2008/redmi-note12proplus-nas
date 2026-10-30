@@ -1,45 +1,20 @@
 # Start here / Começar aqui
 
-## What is automatic today?
+The [experimental 0.2.0-rc3 release](https://github.com/Xcat2008/redmi-note12proplus-nas/releases/tag/v0.2.0-rc3) provides a Windows downloader and installation assistant. Start with the [Portuguese installation guide](INSTALL-WIZARD.pt-PT.md); the engineering porting notes are optional background, not steps that every user needs to perform.
 
-For the intended Windows experience, start with the [graphical installation assistant guide](INSTALL-WIZARD.pt-PT.md). The assistant and image candidate are prepared for validation; public installation remains blocked until the complete physical test and binary review pass. You do not need to follow the engineering build steps to use a future approved package.
+1. Confirm **Redmi Note 12 Pro+ 5G 22101316UG / rubypro / 256 GB**, factory firmware **OS2.0.16.0.UMOEUXM**, slot **a**. Other models and capacities are not validated.
+2. Back up what you need and unlock the bootloader through Xiaomi. Complete any owner-account activation. The installer does not replace Mi Unlock.
+3. Download **RedmiNAS-Download.exe** from the release. It downloads and verifies the fixed parts, joins the ZIP and opens **RedmiNAS-Setup.exe**.
+4. Verify the package, choose individual credentials and optional Wi-Fi, connect only the target phone in FASTBOOT and read the erase confirmation. Installation replaces Android and data. Do not use it as an upgrade for an existing NAS.
+5. Keep USB, power and Internet available during personalization and first setup. Open **http://redmi-nas.local** or the phone's router-assigned address and create your Homeio account.
+6. Add your own media and applications. Jellyfin's MediaTek profile is applied through the store. The gaming setup includes RetroArch, Steam and Sunshine; upstream accounts are yours to configure.
 
-| Stage | Current experience |
-| --- | --- |
-| Xiaomi account and bootloader unlock | Manual, with Xiaomi's official tools |
-| Replace Android with the native Droidian port | Clean image/Windows installer candidate built; physical installation test pending |
-| Install the NAS stack once native Droidian boots | `scripts/install-nas.sh`, an automated entry point with a read-only preflight mode |
-| Create the Homeio administrator | First-run web page, your own credentials |
-| Add applications | Homeio app store; app-specific hardware compatibility must still be checked |
+The boot/layout was physically validated with rc2; changed rc3 userspace was exercised on the project NAS. A new complete physical rc3 installation and a second-device test were not performed. See [the exact image scope](IMAGE-INSTALLER.md).
 
-**For a non-technical user starting from stock Android, this release is not yet a simple consumer installation.** The original working phone demonstrates feasibility; it does not remove the unfinished Linux image/installer work. Do not run the NAS installer on Android/Termux or a different Redmi.
+## Optional virtualization
 
-## Already have this native Droidian port running?
+Proxmox is preloaded as a clean, disabled optional base. Homeio Settings checks KVM before setup. It needs EL2/KVM already available; Xiaomi bootloader unlock alone is insufficient, and stock-device EL2 activation is not automatic in this release. NAS use does not require Proxmox.
 
-Run these commands **on the phone's native Linux system**, through a local terminal or SSH:
+## Engineering references
 
-```sh
-git clone https://github.com/Xcat2008/redmi-note12proplus-nas.git
-cd redmi-note12proplus-nas
-sudo bash scripts/install-nas.sh --check YOUR_LINUX_USER
-```
-
-Review the check and source. On a fresh compatible system, start the NAS installation:
-
-```sh
-sudo bash scripts/install-nas.sh --install YOUR_LINUX_USER
-```
-
-Replace `YOUR_LINUX_USER` with the Phosh desktop user you created. It requires the documented kernel, prepared `/userdata` and `/DATA` layout, Debian 13 base, internet access and an active Phosh user session. It refuses an existing Homeio installation rather than overwriting accounts. It does not unlock, flash or format the phone.
-
-The script installs prerequisites and the pinned Docker packages, applies the NAS display/power policy, compiles the MediaTek video adapter, builds pinned Homeio with the local patches, and enables its services. This new combined wrapper has preflight/syntax checks; a fresh end-to-end installation on a second phone is still pending. The original component steps and patched application builds were tested separately.
-
-Installing Jellyfin from the Homeio store then applies the MediaTek H.264 encoding profile automatically. The adapter is also precompiled into the clean image candidate. See [video support](MEDIATEK-VIDEO.md) for the precise limits.
-
-After completion, open `http://redmi-nas.local` from another computer on the same network. Create your Homeio account there. Read [validation](VALIDATION.md) before adding important data.
-
-## Ainda estás no Android?
-
-O comando acima **não instala Linux sobre Android**. Primeiro é necessário desbloquear pelo processo oficial Xiaomi e preparar o port Droidian descrito no [guia técnico](INSTALLATION.md). Essa parte ainda é para quem sabe trabalhar com boot images, Halium e recuperação de telemóveis.
-
-Já está em preparação um pacote com imagens Linux limpas e um assistente gráfico Windows, sem dados do autor. O [guia do assistente](INSTALL-WIZARD.pt-PT.md) descreve os passos para o utilizador. A instalação física completa e a recuperação ainda precisam de validação antes de publicar os binários. Consulta o [estado da imagem](IMAGE-INSTALLER.md).
+[Installation and porting](INSTALLATION.md) · [Tested hardware](COMPATIBILITY.md) · [Native gaming](NATIVE-GAMING.md) · [Video acceleration](MEDIATEK-VIDEO.md) · [Credits](../CREDITS.md)

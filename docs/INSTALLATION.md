@@ -2,7 +2,7 @@
 
 ## Read this first
 
-The public release contains the working experiment's configuration, adaptations and guarded installer source. A complete image candidate and a Windows assistant are being prepared; **there is no approved public flashable release yet**. The procedure has not been verified end to end on a second clean phone. For the intended user workflow, read the [installation assistant guide](INSTALL-WIZARD.pt-PT.md). The engineering stages below document the port rather than replace that assistant. Never flash a 4G model's image onto this 5G model.
+The [experimental rc3 release](https://github.com/Xcat2008/redmi-note12proplus-nas/releases/tag/v0.2.0-rc3) provides a clean image and Windows assistant for the exact documented model and firmware. Use the [installation assistant guide](INSTALL-WIZARD.pt-PT.md) for that workflow. These engineering notes document the port; they are not commands that every installer must reproduce. The boot/layout passed physical rc2 installation, while rc3 userspace fixes were exercised on the project device. No complete physical rc3 reinstall or second-device test is claimed. Never flash a 4G model's image onto this 5G model.
 
 The irreversible steps are bootloader unlocking and replacing Android userdata. Back up personal files, app data and authentication codes first. Use firmware for your exact model/region and keep a tested path to FASTBOOT and the complete factory recovery firmware.
 
@@ -31,9 +31,9 @@ For Wi-Fi, build ruby conninfra/connfem with the WLAN gen4m and adaptor sources 
 
 This stage needs a porter. Use the exact factory boot image as the packaging baseline, preserve its header/DTB/DTBO assumptions, replace its kernel and ramdisk with the built kernel and Halium early userspace, and configure Halium to mount the prepared Linux rootfs from userdata. Keep the device's vendor/system compatibility material required by the Android hardware container. Refer to upstream Droidian instructions rather than copying another phone's boot image.
 
-On this device, **`fastboot boot` crashed the LK bootloader**. The working experiment used an image written to **boot_a** followed by reboot, with a correctly sized **128 MiB** boot image and an AVB footer, retaining the top-level factory vbmeta flags. The known working image used a test-key AVB footer; an unlocked bootloader is required. Image hashes in the manifest are identification records, not files offered for download.
+On this device, **`fastboot boot` crashed the LK bootloader**. The working experiment used an image written to **boot_a** followed by reboot, with a correctly sized **128 MiB** boot image and an AVB footer, retaining the top-level factory vbmeta flags. The known working image used a test-key AVB footer; an unlocked bootloader is required. The experimental binary release identifies its actual boot/data files and their SHA-256 values in installer-manifest.json.
 
-The guarded client in `image/installer.py` can flash only the documented boot/userdata package after its checks and explicit erase confirmation. Unvalidated candidates are blocked by default. A supervised clean-install and recovery test is still required before an installable public release. Do not use the old experimental automatic stock-boot recovery approach: after userdata is ext4 Linux data, stock Android boot alone cannot restore the device.
+The guarded client in `image/installer.py` can flash only the documented boot/userdata package after its checks and explicit erase confirmation. Unvalidated candidates are blocked by default. The rc3 manifest permits only its scoped experimental rc2-baseline revision; a changed, unvalidated boot/layout remains blocked. Do not use the old experimental automatic stock-boot recovery approach: after userdata is ext4 Linux data, stock Android boot alone cannot restore the device.
 
 ## 5. Prepare storage and accounts
 

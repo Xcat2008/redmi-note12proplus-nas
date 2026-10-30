@@ -2,7 +2,7 @@
 
 On 29 October 2026, the project device booted a full Debian 13 ARM64 VM under Proxmox VE 9.2.20 with hardware KVM. Eight guest workers were exercised on the eight physical CPUs, with calculation integrity, disk persistence, networking and guest restart checks.
 
-This is an experimental device profile. It is separate from the previously assembled NAS image candidate.
+This is an experimental device profile. The rc3 binary release includes its clean optional userspace, disabled by default; actual EL2/KVM is still required before activation.
 
 ## What is available now
 
@@ -12,7 +12,7 @@ This is an experimental device profile. It is separate from the previously assem
 | This repository | Compatibility source, a guarded updater for an existing environment, kernel configuration fragment and validation notes |
 | Previous 0.1.0-rc7 candidate | Does not contain the KVM platform changes or this Proxmox profile |
 | Private 0.2.0-rc2 validation build | Clean packages and matching KVM kernel/modules included, optional service disabled, no author accounts or VMs. Optional activation and an eight-vCPU smoke guest passed after reinstalling the project phone. Stock-device EL2 activation is still unvalidated. |
-| Public automatic fresh Proxmox install | Not released; stock-device EL2 activation and binary redistribution review remain incomplete |
+| Experimental rc3 | Clean optional base included. Activate through Homeio Settings only after KVM checks pass. Stock-device EL2 activation is not automated |
 
 The intended distribution is an **optional virtual-machine component** on a compatible KVM platform. A NAS-only installation should not have to run the Proxmox daemons. This is not an App Store entry that already exists. The image setup now accepts the exact tested KVM kernel and installs the isolated-environment prerequisites; the optional PVE service remains disabled until explicitly configured on a working KVM platform. Automatic personal backups remain off.
 

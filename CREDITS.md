@@ -27,9 +27,10 @@
 | ARMSX2 contributors | Experimental native ARM64 PS2 emulator used in the development tests | https://github.com/ARMSX2/ARMSX2 |
 | bmdhacks / MaliSX2 and Mesa contributors | Native Mali Vulkan driver path used by the scoped presentation bridge | https://github.com/bmdhacks/malisx2 · https://github.com/bmdhacks/armsx2-turnip |
 | LinuxServer.io and Selkies contributors | Container base and browser streaming session for the Homeio gaming stack | https://github.com/linuxserver/docker-retroarch · https://github.com/selkies-project/selkies |
+| Pixelflux contributors | X11 capture and V4L2 streaming encoder used with the scoped MediaTek adapter | https://github.com/selkies-project/pixelflux |
 | LizardByte / Sunshine and Moonlight contributors | Game streaming server and compatible clients | https://github.com/LizardByte/Sunshine · https://moonlight-stream.org/ |
 | Valve and ANGLE/Chromium contributors | Official ARM64 Steam client and browser graphics stack for Big Picture | https://store.steampowered.com/ · https://chromium.googlesource.com/angle/angle |
-| Proxmox contributors | Official ARM64 virtual-machine management userspace, isolated from the phone's existing hardware services | https://www.proxmox.com/ · https://git.proxmox.com/ |
+| Proxmox contributors | Virtual-machine management userspace, adapted here for ARM64 and isolated from the phone's existing hardware services | https://www.proxmox.com/ · https://git.proxmox.com/ |
 | QEMU and Linux KVM contributors | Hardware-accelerated ARM64 guests and virtualization infrastructure; upstream cache-geometry work informed the compatibility analysis | https://www.qemu.org/ · https://kernel.org/ |
 | LXCFS and systemd contributors | Scoped resource metrics and the isolated systemd-nspawn environment | https://github.com/lxc/lxcfs · https://systemd.io/ |
 | TianoCore / EDK2 contributors | ARM UEFI firmware obtained separately through the official package repository | https://github.com/tianocore/edk2 |

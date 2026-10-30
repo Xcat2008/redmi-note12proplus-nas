@@ -6,7 +6,7 @@ The native renderer was tested with **Mali-G68 MC4 / OpenGL ES 3.2** in the appl
 
 The later development baseline adds [native Vulkan source adapters and PS2 tuning](native/README.md). The adapters address rendering cost and frame pacing; occasional timing spikes remain. This opt-in native path is not yet integrated into a freshly validated public image. See [performance notes](../../docs/PERFORMANCE.md).
 
-Browser capture and Sunshine currently encode video in software. Jellyfin's MediaTek hardware-video integration does not automatically provide an encoder to Sunshine. The browser defaults to 1280Ã—720 at 30 FPS. PS2/PS3 gameplay is not certified by installing this stack.
+The browser profile now uses [MediaTek H.264 hardware encoding](../../docs/SELKIES-MEDIATEK.md) at a default 1280 × 720 and 30 FPS. X11 capture still copies through shared memory. Sunshine continues to encode in software; Jellyfin's hardware-video integration is separate. Installing this stack does not certify PS2/PS3 performance.
 
 The image includes the Debian-packaged Nestopia (NES) and Gambatte (Game Boy) cores. Additional cores can be installed through RetroArch's updater into the user's writable core directory. The installed PCSX-ReARMed and experimental ARMSX2 ARM64 libraries loaded in the development system, but this older packaged path is not the later tested native Vulkan baseline and does not certify PS2 compatibility.
 

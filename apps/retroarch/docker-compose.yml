@@ -21,6 +21,10 @@ services:
       SELKIES_FRAMERATE: "30"
       SELKIES_SECOND_SCREEN: "false"
       SELKIES_ENCODER: h264enc
+      SELKIES_GPU_ID: '0'
+      GPU_ID: '0'
+      SELKIES_USE_CPU: 'false'
+      LD_PRELOAD: /opt/redmi-selkies/libmediatek-pixelflux.so
       SELKIES_VIDEO_CRF: "28"
       NO_WEBCAM: 'true'
       NO_STEAM: 'true'
@@ -58,11 +62,18 @@ services:
         protocol: udp
     group_add:
       - '3011'
+      - '1000'
     devices:
       - /dev/uinput:/dev/uinput
+      - /dev/video2:/dev/video2
+      - /dev/ion:/dev/ion
     shm_size: 1gb
     restart: unless-stopped
     volumes:
+      - type: bind
+        source: /usr/local/lib/redmi-nas/selkies
+        target: /opt/redmi-selkies
+        read_only: true
       - type: bind
         source: /DATA/AppData/custom-retroarch/config
         target: /config

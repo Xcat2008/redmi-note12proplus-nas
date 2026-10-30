@@ -31,6 +31,7 @@ done
 "${usercmd[@]}" gsettings set org.gnome.settings-daemon.plugins.power sleep-inactive-battery-type nothing
 install -m755 "$repo/scripts/lib/nas-display-wake.py" /usr/local/libexec/nas-display-wake.py
 install -m755 "$repo/scripts/lib/nas-cpu-policy.sh" /usr/local/libexec/nas-cpu-policy.sh
+install -m755 "$repo/scripts/lib/nas-cpu-online.py" /usr/local/libexec/nas-cpu-online.py
 install -m644 "$repo/scripts/lib/nas-display-wake.service" /etc/systemd/system/nas-display-wake.service
 install -m644 "$repo/scripts/lib/nas-cpu-policy.service" /etc/systemd/system/nas-cpu-policy.service
 printf 'NAS_DESKTOP_USER=%s

@@ -27,9 +27,16 @@ jobs:
         run: sudo python3 -m unittest discover -s apps/proxmox/tests -p test_control.py -v
       - name: Browser launch assets and routes
         run: python3 -m unittest discover -s scripts/lib -p test_gaming_web_assets.py -v
+      - name: CPU availability respects platform safety limits
+        run: python3 -m unittest discover -s scripts/lib -p test_nas_cpu_online.py -v
       - name: Shell syntax
         run: find scripts homeio/installer apps/jellyfin/mediatek apps/steam apps/proxmox hardware/gaming -name '*.sh' -print0 | xargs -0 -n1 bash -n
       - name: Native adapter synthetic tests
         run: sh apps/retroarch/native/tests/run.sh
       - name: MediaTek adapter compiler checks
         run: gcc -shared -fPIC -O2 -Wall -Wextra -Werror -o /tmp/libmediatek-dmabuf.so apps/jellyfin/mediatek/mediatek-dmabuf-bridge.c -ldl -pthread
+      - name: MediaTek Selkies adapter and colour metadata
+        run: |
+          gcc -shared -fPIC -O2 -Wall -Wextra -Werror -o /tmp/libmediatek-pixelflux.so apps/retroarch/mediatek-pixelflux.c -ldl -pthread
+          gcc -O1 -g -fsanitize=address,undefined -Wall -Wextra -Werror -o /tmp/test-mediatek-colour apps/retroarch/tests/test_mediatek_colour.c
+          /tmp/test-mediatek-colour

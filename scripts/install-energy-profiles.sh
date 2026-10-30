@@ -80,6 +80,7 @@ Exec=/usr/local/libexec/redmi-nas/mps-launch
 User=root
 EOF
 install -m755 "$repo/scripts/lib/nas-cpu-policy.sh" "$prefix/usr/local/libexec/nas-cpu-policy.sh"
+install -m755 "$repo/scripts/lib/nas-cpu-online.py" "$prefix/usr/local/libexec/nas-cpu-online.py"
 install -m644 "$repo/scripts/lib/nas-cpu-policy.service" "$prefix/etc/systemd/system/nas-cpu-policy.service"
 printf 'redmi-ruby-nas\n' > "$prefix/etc/homeio/hardware-profile"
 if [ -z "$prefix" ]; then

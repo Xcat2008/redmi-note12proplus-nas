@@ -13,6 +13,7 @@ state=/var/lib/redmi-retroarch-homeio
 runtime=/usr/local/lib/redmi-nas/retroarch
 test -f /opt/home-server/.env
 test -x /usr/bin/retroarch
+bash "$repo/scripts/install-selkies-mediatek.sh"
 install -d -m755 "$state" "$runtime" /usr/local/share/redmi-nas/gaming
 install -m755 "$source_dir/homeio-session.py" "$runtime/homeio-session.py"
 install -m644 "$source_dir/retroarch-homeio.cfg" "$runtime/retroarch-homeio.cfg"
@@ -128,6 +129,7 @@ for port,upstream,title in [(3443,'http://127.0.0.1:3300','RetroArch'),
 # rather than assuming the same numeric ID on a reconfigured installation.
 compose=Path('/var/lib/redmi-retroarch-homeio/docker-compose.yml')
 s=compose.read_text().replace("- '3011'", "- '"+str(Path('/dev/uinput').stat().st_gid)+"'")
+s=s.replace("- '1000'", "- '"+str(Path('/dev/video2').stat().st_gid)+"'")
 compose.write_text(s)
 PY
 python3 "$repo/scripts/lib/gaming-web-assets.py" --public "$repo/homeio/new-files/public"

@@ -10,6 +10,13 @@ Open **Settings â†’ Performance** in Homeio. The profile controls the nativ
 
 The GPU and memory retain MediaTek's automatic DVFS. No frequency table, regulator voltage or thermal limit is changed. The NAS remains reachable when its display turns off; full-system sleep remains disabled for server availability.
 
+The balanced/performance boot policy also checks CPU availability. On the tested
+kernel, it can bring the two A78 CPUs back online if they were left offline and
+MediaTek reports no active thermal or battery-power restriction. It never disables
+those restrictions or forces a core online against a kernel refusal. The power
+saver profile is left alone. Online cores can still idle and scale their clocks;
+availability does not mean they run continuously at maximum frequency.
+
 A reported clock is not a power meter. Some driver readings show the last active frequency even while a core is in an idle state. An application rendering a menu or streaming video can also create work without keyboard or mouse input.
 
 ## Corrected power-service behavior

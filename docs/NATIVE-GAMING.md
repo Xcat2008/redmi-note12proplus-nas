@@ -38,8 +38,10 @@ Upload files through Homeio:
 | Other system BIOS | `/DATA/Games/BIOS` |
 | Media | `/DATA/Media/Filmes` or `/DATA/Media/Series` |
 
-The browser stream defaults to 720p30. Browser/Sunshine encoding uses software;
-Mali graphics composition and Jellyfin's hardware video pipeline are distinct.
+The browser stream defaults to 720p30. The tested source profile now uses
+[MediaTek H.264 hardware encoding in Selkies](SELKIES-MEDIATEK.md). X11 capture
+still uses shared-memory readback. Sunshine encoding remains on the CPU; Mali
+graphics composition and Jellyfin's video pipeline are separate integrations.
 No gaming FPS or latency guarantee is inferred from a Jellyfin playback test.
 
 ## Persistence and validation

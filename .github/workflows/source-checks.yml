@@ -33,6 +33,8 @@ jobs:
         run: python3 -m unittest discover -s scripts/lib -p test_gaming_web_assets.py -v
       - name: CPU availability respects platform safety limits
         run: python3 -m unittest discover -s scripts/lib -p test_nas_cpu_online.py -v
+      - name: NAS desktop idle profile and restoration
+        run: python3 -m unittest discover -s scripts/lib -p test_nas_desktop_profile.py -v
       - name: Shell syntax
         run: find scripts homeio/installer apps/jellyfin/mediatek apps/steam apps/proxmox hardware/gaming -name '*.sh' -print0 | xargs -0 -n1 bash -n
       - name: Native adapter synthetic tests

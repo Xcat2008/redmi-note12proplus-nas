@@ -39,6 +39,18 @@ Tests on 26 October 2026 used factory operating points:
 
 The memory display distinguishes **8 GiB physical RAM**, roughly **7.4 GiB Linux-usable RAM** after platform reservations, and current available memory. ZRAM and filesystem cache are retained; they do not change the installed physical capacity.
 
+## Desktop services in the NAS profile
+
+The phone-specific installer marks GNOME's existing-user first-login setup complete after the NAS account has been provisioned. It also adds a per-user autostart override for GNOME Software so the local phone app store does not stay resident without use. The store remains installed and can be opened manually. APT/system update services, the phone shell, the Homeio store and server services are unaffected.
+
+`scripts/lib/nas-desktop-profile.py` defaults to a check-only run. The installer applies it to the selected desktop account and installs the helper at `/usr/local/libexec/nas-desktop-profile.py`. Previous settings remain in a root-readable backup on that device. Repeated application is idempotent; symlinked configuration paths and later user changes are rejected for review. To restore the managed settings:
+
+```sh
+sudo python3 /usr/local/libexec/nas-desktop-profile.py --user YOUR_LINUX_USER --restore --apply
+```
+
+This removes unused desktop autostart, not caches or virtual machines. It does not establish that every possible shell memory leak is fixed. If Phosh memory grows during long uptime, compare proportional resident memory (PSS), available memory and memory pressure over time; a one-time display-session restart only establishes a fresh baseline. A phone reboot or periodic automatic restart is not part of this profile. The published rc3 binary is unchanged by later source improvements.
+
 ## Operating limits
 
 The web interface exposes the three factory-limit CPU profiles. Frequency tables, voltage management and platform thermal controls remain unchanged.

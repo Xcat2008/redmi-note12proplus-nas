@@ -38,6 +38,8 @@ printf 'NAS_DESKTOP_USER=%s
 ' "$desktop_user" > /etc/default/redmi-nas
 printf 'redmi-ruby-nas
 ' > /etc/homeio/hardware-profile
+install -m755 "$repo/scripts/lib/nas-desktop-profile.py" /usr/local/libexec/nas-desktop-profile.py
+python3 /usr/local/libexec/nas-desktop-profile.py --user "$desktop_user" --apply
 systemctl mask sleep.target suspend.target hibernate.target hybrid-sleep.target
 systemctl daemon-reload
 systemctl enable --now nas-display-wake.service nas-cpu-policy.service

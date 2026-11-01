@@ -67,6 +67,14 @@ The disk wrapper selects PVE's normal alternative when `io_uring` is unavailable
 
 Choose a new Proxmox password of at least eight characters in that setup card; no shared default is supplied. After setup, **Open Proxmox** opens HTTPS port 8006 on the current NAS host. Log in as `root`, realm **Linux PAM**. Existing installations show the open button and preserve their accounts. The setup API requires a Homeio session and same-origin requests; it rejects a repeated setup of an initialized installation. The node's Reboot/Shutdown controls apply to the isolated Proxmox environment. A full phone restart is a different operation. It passed after clean rc2 installation, both before and after enabling the optional Proxmox environment.
 
+### On-demand service operation
+
+The source after rc3 adds **Start and open Proxmox** and a separate **Start Proxmox with the NAS** preference in the Homeio setup card. A configured, stopped environment retains its accounts and VM disks. Opening it through Homeio explicitly starts the existing service and waits for its web panel before navigating to HTTPS port 8006. Status polling never starts it. The launcher requires a Homeio session, and start/autostart mutations require the same browser origin as the NAS.
+
+New optional setups start Proxmox once for configuration without enabling it at every NAS boot. Autostart is opt-in; changing that preference does not stop running services or guests. Existing installations retain their preference until changed. To finish a session, use the node's **Shutdown** control inside Proxmox; the NAS host remains running. Closing a browser tab never stops a guest. Any guest startup policy configured by its owner remains managed by Proxmox when its environment starts.
+
+This reduces idle service memory without deleting the optional component. A direct bookmark to port 8006 cannot start a stopped environment; enter through Homeio first. These later source changes do not retroactively modify the published rc3 binary.
+
 ## Guest setup and validation
 
 Use an **ARM64/aarch64** guest image, CPU `host`, UEFI/OVMF, a persistent EFI variables disk and a VirtIO/SCSI disk. `vmbr0` is the tested private bridge. The headless Debian cloud image uses `serial0` as its default console; its inactive graphical framebuffer is not a desktop. For cloud-init, choose credentials specific to that VM. Memory allocated to VMs must leave room for PVE services and the NAS.

@@ -51,6 +51,8 @@ Abre **Definições → Performance → Máquinas virtuais · Proxmox** no Homei
 
 Usa **Abrir Proxmox**, que abre HTTPS na porta 8006 do endereço atual da NAS. Entra como `root`, domínio **Linux PAM**, com a palavra-passe que escolheste. Não são fornecidas contas do autor ou uma palavra-passe partilhada.
 
+No código posterior à rc3, a mesma secção permite **Iniciar e abrir Proxmox** quando o ambiente está parado. O arranque automático com a NAS tem uma opção separada, desligada por defeito nas novas configurações. Consultar o estado não liga o serviço. Fechar o browser não desliga VMs; quando terminares, utiliza o controlo **Shutdown** do nó dentro do Proxmox para encerrar esse ambiente, mantendo a NAS ligada. Um favorito direto à porta 8006 não liga um Proxmox parado: abre-o primeiro pelo Homeio. Estas alterações de código não modificam retroativamente o binário rc3 publicado.
+
 O ambiente partilha os oito CPUs físicos e a RAM disponível com a NAS; não duplica memória. As VMs devem deixar recursos para o sistema. Usa convidados **ARM64/aarch64**, CPU `host`, UEFI, disco EFI persistente, VirtIO/SCSI e a bridge privada `vmbr0`. A rede privada fornece DHCP/DNS e saída por NAT; não cria um servidor DHCP na rede doméstica. A [validação Proxmox](PROXMOX.md) distingue o que já passou dos recursos ainda não testados.
 
 Não instales um kernel genérico Proxmox sobre o kernel do telefone, não substituas o LXC de hardware do Droidian e não voltes a bloquear o bootloader com este sistema instalado.

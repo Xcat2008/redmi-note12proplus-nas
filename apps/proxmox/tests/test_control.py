@@ -13,6 +13,48 @@ control=importlib.util.module_from_spec(spec);spec.loader.exec_module(control)
 
 
 class SetupBoundary(unittest.TestCase):
+    def test_start_refuses_an_unconfigured_environment(self):
+        with patch.object(control,'status',return_value={'configured':False}),patch.object(control.subprocess,'run') as run:
+            with self.assertRaisesRegex(ValueError,'Set up'):control.start_existing()
+            run.assert_not_called()
+
+    def test_running_service_is_not_restarted_by_opening_the_panel(self):
+        state={'configured':True,'busy':False,'running':True,'starting':False}
+        with patch.object(control,'status',return_value=state),patch.object(control.subprocess,'run') as run:
+            self.assertEqual(control.start_existing(),state)
+            run.assert_not_called()
+
+    def test_start_only_starts_the_fixed_existing_service(self):
+        stopped={'configured':True,'busy':False,'running':False,'starting':False}
+        starting=dict(stopped,starting=True)
+        with patch.object(control,'status',side_effect=[stopped,starting]),patch.object(control.subprocess,'run') as run:
+            self.assertTrue(control.start_existing()['starting'])
+            self.assertEqual(run.call_args.args[0],['systemctl','start','--no-block',control.UNIT])
+            self.assertEqual(run.call_count,1)
+
+    def test_autostart_is_a_preference_not_a_stop_operation(self):
+        state={'configured':True,'busy':False,'running':True}
+        with patch.object(control,'status',return_value=state),patch.object(control.subprocess,'run') as run:
+            control.set_autostart(False)
+            self.assertEqual(run.call_args.args[0],['systemctl','disable',control.UNIT])
+            self.assertEqual(run.call_count,1)
+
+    def test_autostart_requires_boolean_and_existing_setup(self):
+        with patch.object(control.subprocess,'run') as run:
+            for value in ['false',0,None,{},[]]:
+                with self.assertRaises(ValueError):control.set_autostart(value)
+            run.assert_not_called()
+        with patch.object(control,'status',return_value={'configured':False}),patch.object(control.subprocess,'run') as run:
+            with self.assertRaises(ValueError):control.set_autostart(True)
+            run.assert_not_called()
+
+    def test_polling_stopped_service_does_not_probe_or_start_it(self):
+        result=subprocess.CompletedProcess([],0,'ActiveState=inactive\nSubState=dead\nUnitFileState=disabled\n','')
+        with patch.object(control.subprocess,'run',return_value=result) as run,patch.object(control.urllib.request,'urlopen') as probe:
+            self.assertEqual(control.runtime_status(),{'running':False,'starting':False,'webReady':False,'autostartEnabled':False})
+            self.assertEqual(run.call_args.args[0],['systemctl','show',control.UNIT,'--property=ActiveState,SubState,UnitFileState'])
+            run.assert_called_once();probe.assert_not_called()
+
     def test_password_constraints(self):
         for value in ['1234567','password\n',None,'x'*129]:
             with self.subTest(value=value):

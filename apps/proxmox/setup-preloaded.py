@@ -98,7 +98,9 @@ def enable(password):
     STATE.mkdir(parents=True,exist_ok=True)
     marker=Path('/var/lib/redmi-nas/proxmox-enabled');marker.touch(mode=0o600)
     subprocess.run(['systemctl','daemon-reload'],check=True)
-    subprocess.run(['systemctl','enable','--now','redmi-proxmox-container.service'],check=True)
+    # Initial setup starts the component once; subsequent NAS boots stay lean.
+    # Homeio exposes a separate explicit autostart preference after setup.
+    subprocess.run(['systemctl','start','redmi-proxmox-container.service'],check=True)
     if subprocess.run(['systemctl','is-active','--quiet','redmi-proxmox-container']).returncode:raise ValueError('Proxmox did not start; no VM was created')
     config.write_text('''server {
  listen 8006 ssl;

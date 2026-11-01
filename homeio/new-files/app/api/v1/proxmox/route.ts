@@ -17,16 +17,25 @@ export async function POST(request: Request) {
   let sameOrigin = false;
   try { const source = new URL(origin ?? ""); sameOrigin = ["http:", "https:"].includes(source.protocol) && source.origin === origin && source.host === request.headers.get("host"); } catch {}
   if (!sameOrigin) return NextResponse.json({ error: "Open Proxmox setup from Homeio Settings." }, { status: 403 });
-  let password: string;
+  let input: Record<string, unknown>;
   try {
     const raw = await request.text();
     if (raw.length > 2048) throw new Error();
-    const input: unknown = JSON.parse(raw);
-    if (!input || typeof input !== "object" || Array.isArray(input) || Object.keys(input).join() !== "password") throw new Error();
+    const value: unknown = JSON.parse(raw);
+    if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error();
+    input = value as Record<string, unknown>;
+  } catch { return NextResponse.json({ error: "Choose a valid Proxmox operation." }, { status: 400 }); }
+  try {
+    if (Object.keys(input).join() === "action" && input.action === "start") {
+      return NextResponse.json({ data: await proxmoxSetup("start") }, { status: 202, headers: noStore });
+    }
+    if (Object.keys(input).length === 2 && Object.hasOwn(input, "action") && Object.hasOwn(input, "enabled") && input.action === "set-autostart" && typeof input.enabled === "boolean") {
+      return NextResponse.json({ data: await proxmoxSetup("set-autostart", undefined, input.enabled) }, { headers: noStore });
+    }
+    if (Object.keys(input).join() !== "password") return NextResponse.json({ error: "Choose a valid Proxmox operation." }, { status: 400 });
     const value = (input as { password: unknown }).password;
-    if (typeof value !== "string" || value.length < 8 || value.length > 128 || /[\u0000-\u001f]/.test(value)) throw new Error();
-    password = value;
-  } catch { return NextResponse.json({ error: "Choose a password with 8–128 characters." }, { status: 400 }); }
-  try { return NextResponse.json({ data: await proxmoxSetup("enable", password) }, { status: 202, headers: noStore }); }
+    if (typeof value !== "string" || value.length < 8 || value.length > 128 || /[\u0000-\u001f]/.test(value)) return NextResponse.json({ error: "Choose a password with 8–128 characters." }, { status: 400 });
+    return NextResponse.json({ data: await proxmoxSetup("enable", value) }, { status: 202, headers: noStore });
+  }
   catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : "Could not start Proxmox setup." }, { status: 409, headers: noStore }); }
 }

@@ -10,10 +10,8 @@ export function ProxmoxSetupCard() {
   const [password, setPassword] = useState("");
   const [confirmation, setConfirmation] = useState("");
   const [pending, setPending] = useState(false);
-  const [href, setHref] = useState("");
   useEffect(() => {
     let alive = true;
-    const url = new URL(window.location.href); url.protocol = "https:"; url.port = "8006"; url.pathname = "/"; url.search = ""; url.hash = ""; setHref(url.href);
     async function refresh() {
       try {
         const response = await fetch("/api/v1/proxmox", { cache: "no-store" });
@@ -25,6 +23,16 @@ export function ProxmoxSetupCard() {
     void refresh(); const timer = setInterval(() => { if (!document.hidden) void refresh(); }, 5000);
     return () => { alive = false; clearInterval(timer); };
   }, []);
+  async function control(input: { action: "start" } | { action: "set-autostart"; enabled: boolean }) {
+    setPending(true); setError("");
+    try {
+      const response = await fetch("/api/v1/proxmox", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(input) });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Could not change Proxmox state.");
+      setData(result.data);
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not change Proxmox state."); }
+    finally { setPending(false); }
+  }
   async function enable(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault(); setError("");
     if (password.length < 8 || password !== confirmation) { setError("Use at least 8 characters and enter the same password twice."); return; }
@@ -42,7 +50,12 @@ export function ProxmoxSetupCard() {
     <p className="text-muted-foreground">Optional experimental ARM64 environment. Off by default. Shares the phone's RAM and CPUs with the NAS.</p>
     {error && <p role="alert">{error}</p>}
     {!data && <p role="status">Checking optional setup…</p>}
-    {data?.configured && <><p>Configured. Sign in as <strong>root</strong>, realm <strong>Linux PAM</strong>, with the password chosen during setup.</p><a href={href} target="_blank" rel="noopener noreferrer" className="inline-block rounded-lg border border-glass-border px-3 py-2 font-medium">Open Proxmox</a></>}
+    {data?.configured && <>
+      <p>{data.starting || data.running && !data.webReady ? "Starting Proxmox…" : data.running ? "Running." : "Stopped. Uses no Proxmox service memory until started."} Sign in as <strong>root</strong>, realm <strong>Linux PAM</strong>, with the password chosen during setup.</p>
+      <a href="/proxmox-launcher.html" onClick={() => { if (!data.running && !pending) void control({ action: "start" }); }} target="_blank" rel="noopener noreferrer" className="inline-block rounded-lg border border-glass-border px-3 py-2 font-medium">{data.running ? "Open Proxmox" : "Start and open Proxmox"}</a>
+      <label className="flex items-center gap-2"><input type="checkbox" checked={data.autostartEnabled} disabled={pending || data.busy} onChange={event => { void control({ action: "set-autostart", enabled: event.target.checked }); }} />Start Proxmox with the NAS</label>
+      <p className="text-muted-foreground">Off by default. Closing a browser tab never stops guests. When finished, use the node's Shutdown control inside Proxmox to shut down its environment.</p>
+    </>}
     {data && !data.configured && <>
       {data.errors.map(message => <p key={message} role="status">{message}</p>)}
       {!data.ready && <p className="text-muted-foreground">The NAS remains usable. Xiaomi bootloader unlocking alone does not guarantee EL2/KVM availability; this setup does not change phone firmware.</p>}

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="pt-PT">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="same-origin"><title>Proxmox · Redmi NAS</title>
+<style>body{font:17px/1.6 system-ui,sans-serif;max-width:42rem;margin:12vh auto;padding:1.5rem;background:#111827;color:#e5e7eb}a{color:#7dd3fc}button{padding:.7rem 1rem;border:1px solid #64748b;border-radius:.6rem;background:#1e293b;color:inherit;font:inherit;cursor:pointer}button:disabled{opacity:.5}</style></head>
+<body><h1>Proxmox</h1><p id="state" role="status">A verificar o serviço…</p><button id="start" hidden>Iniciar Proxmox</button><p><a href="/">Voltar ao Homeio</a></p>
+<script>
+(() => {
+  const state = document.getElementById("state"), button = document.getElementById("start");
+  if (window.top !== window.self) { state.textContent = "Abre esta página numa janela própria."; return; }
+  let busy = false, ticks = 0, done = false;
+  async function refresh() {
+    if (done || busy) return;
+    try {
+      const response = await fetch("/api/v1/proxmox", {cache:"no-store"});
+      if (response.status === 401) throw new Error("Entra primeiro na tua conta Homeio.");
+      const result = await response.json();
+      if (!response.ok || !result.data) throw new Error("Não foi possível consultar o Proxmox.");
+      const d = result.data;
+      if (!d.configured) { done = true; state.textContent = "Prepara primeiro o Proxmox nas definições do Homeio."; return; }
+      if (d.webReady) {
+        done = true;
+        const target = new URL(window.location.href); target.protocol="https:"; target.port="8006"; target.pathname="/"; target.search=""; target.hash="";
+        window.location.replace(target.href); return;
+      }
+      button.hidden = d.running || d.starting;
+      state.textContent = d.running || d.starting ? "A iniciar o painel. As tuas contas e máquinas são mantidas." : "O Proxmox está parado para poupar memória. Podes iniciá-lo quando precisares.";
+      if (++ticks > 90) throw new Error("O painel ainda não respondeu. Volta às definições para verificar o estado.");
+    } catch (e) { done = true; state.textContent = e instanceof Error ? e.message : "Não foi possível abrir o painel."; }
+  }
+  button.addEventListener("click", async () => {
+    if (busy) return; busy = true; button.disabled = true;
+    try {
+      const response = await fetch("/api/v1/proxmox", {method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:"start"})});
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "Não foi possível iniciar o Proxmox.");
+      state.textContent = "A iniciar o painel…"; button.hidden = true; done = false; ticks = 0;
+    } catch (e) { state.textContent = e instanceof Error ? e.message : "Falha ao iniciar."; }
+    finally { busy = false; button.disabled = false; }
+    await refresh();
+  });
+  void refresh(); setInterval(() => { if (!document.hidden) void refresh(); }, 2000);
+})();
+</script></body></html>

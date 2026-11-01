@@ -3,7 +3,8 @@
 # Copyright (c) 2026 José Miranda (Xcat2008)
 """Local, authenticated-web-UI backend for optional Proxmox setup.
 
-This helper never flashes firmware, reboots the NAS, or starts a guest VM.
+This helper never flashes firmware, reboots the NAS, or issues a guest-start command.
+Existing Proxmox guest-autostart rules are managed by Proxmox itself.
 The web server must authenticate and check the request origin before invoking it.
 """
 from pathlib import Path
@@ -16,11 +17,31 @@ import subprocess
 import sys
 import tempfile
 import time
+import ssl
+import urllib.request
 
 RUNTIME=Path('/run/redmi-proxmox-setup')
 STATE=Path('/var/lib/redmi-nas/proxmox-distribution')
 MARKER=Path('/var/lib/redmi-nas/proxmox-enabled')
 SETUP=Path('/usr/local/sbin/redmi-proxmox-setup')
+UNIT='redmi-proxmox-container.service'
+
+
+def runtime_status():
+    result=subprocess.run(['systemctl','show',UNIT,'--property=ActiveState,SubState,UnitFileState'],capture_output=True,text=True,timeout=4)
+    if result.returncode:raise ValueError('Could not read the optional Proxmox service.')
+    fields=dict(line.split('=',1) for line in result.stdout.splitlines() if '=' in line)
+    running=fields.get('ActiveState')=='active'
+    web_ready=False
+    if running:
+        # This is a loopback health probe of our own self-signed NAS proxy.
+        # Browser certificate handling and the user's login are unchanged.
+        try:
+            with urllib.request.urlopen('https://127.0.0.1:8006/',timeout=1,context=ssl._create_unverified_context()) as response:
+                web_ready=response.status==200
+        except (OSError,ValueError):pass
+    return {'running':running,'starting':fields.get('ActiveState')=='activating',
+            'webReady':web_ready,'autostartEnabled':fields.get('UnitFileState') in ('enabled','enabled-runtime')}
 
 
 def runtime_directory():
@@ -58,7 +79,28 @@ def status():
         else:errors=runpy.run_path(str(SETUP))['preflight']()
     return {'configured':configured,'ready':not errors,'errors':errors,
             'busy':job['state'] in ['queued','running'],'job':job,'webPort':8006,
-            'loginUser':'root','loginRealm':'Linux PAM','defaultEnabled':False}
+            'loginUser':'root','loginRealm':'Linux PAM','defaultEnabled':False,
+            **(runtime_status() if configured else {'running':False,'starting':False,'webReady':False,'autostartEnabled':False})}
+
+
+def start_existing():
+    current=status()
+    if not current['configured']:raise ValueError('Set up Proxmox before starting it.')
+    if current['busy']:raise ValueError('Proxmox setup is in progress.')
+    # Only the pre-existing owned service can be started. Existing accounts,
+    # guest settings and any guest autostart policy are preserved.
+    if not current['running'] and not current['starting']:
+        subprocess.run(['systemctl','start','--no-block',UNIT],capture_output=True,check=True,timeout=6)
+    return status()
+
+
+def set_autostart(enabled):
+    if type(enabled) is not bool:raise ValueError('Choose whether Proxmox starts with the NAS.')
+    current=status()
+    if not current['configured']:raise ValueError('Set up Proxmox first.')
+    if current['busy']:raise ValueError('Proxmox setup is in progress.')
+    subprocess.run(['systemctl','enable' if enabled else 'disable',UNIT],capture_output=True,check=True,timeout=6)
+    return status()
 
 
 def validate_password(password):
@@ -120,6 +162,13 @@ def main():
     action=sys.argv[1] if len(sys.argv)>1 else 'status'
     if action=='worker' and len(sys.argv)==3:worker(sys.argv[2]);return
     if action=='status':data=status()
+    elif action=='start' and len(sys.argv)==2:data=start_existing()
+    elif action=='set-autostart' and len(sys.argv)==2:
+        raw=sys.stdin.buffer.read(2049)
+        if len(raw)>2048:raise ValueError('Request is too large')
+        value=json.loads(raw)
+        if not isinstance(value,dict) or set(value)!={'enabled'}:raise ValueError('Choose an autostart setting')
+        data=set_autostart(value['enabled'])
     elif action=='enable':
         raw=sys.stdin.buffer.read(2049)
         if len(raw)>2048:raise ValueError('Request is too large')
